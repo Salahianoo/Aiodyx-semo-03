@@ -1,0 +1,1118 @@
+{
+  "meta": {
+    "home": {
+      "title": "AIODYX — Custom ERP Solutions for Your Business",
+      "description": "AIODYX designs and builds ERP systems on Odoo — one platform for your operations, with an AI layer for smarter decisions."
+    },
+    "services": {
+      "title": "AI Platform & ERP Services | AIODYX",
+      "description": "AI analytics, business assistants, agents, and enterprise ERP foundation services — from intelligence to implementation."
+    },
+    "about": {
+      "title": "About AIODYX — AI Decision Platform for Business",
+      "description": "AIODYX builds an AI business intelligence layer on top of ERP and enterprise data — so teams make faster, smarter decisions."
+    },
+    "contact": {
+      "title": "Contact AIODYX — Book a Demo",
+      "description": "Book an AIODYX demo or consultation. Explore AI assistants, agents, analytics, and ERP-powered intelligence."
+    },
+    "industries": {
+      "retail": {
+        "title": "AI for Retail | AIODYX",
+        "description": "Sales prediction, inventory optimization, and customer analytics for retail businesses."
+      },
+      "education": {
+        "title": "AI for Education | AIODYX",
+        "description": "Student analytics, enrollment prediction, and institution performance insights."
+      },
+      "healthcare": {
+        "title": "AI for Healthcare | AIODYX",
+        "description": "Operational analytics and resource optimization for healthcare organizations."
+      },
+      "finance": {
+        "title": "AI for Finance | AIODYX",
+        "description": "Risk detection, forecasting, and financial intelligence for finance teams."
+      },
+      "smes": {
+        "title": "AI for SMEs | AIODYX",
+        "description": "Simple AI dashboards and automated reports built for growing businesses."
+      }
+    },
+    "not-found": {
+      "title": "Page not found | AIODYX",
+      "description": "The page you are looking for does not exist or may have moved."
+    }
+  },
+  "brand": {
+    "name": "AIODYX",
+    "tagline": "Custom ERP with an AI decision layer"
+  },
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "about": "About",
+    "contact": "Contact",
+    "cta_demo": "Book Demo",
+    "cta_sales": "Contact Sales",
+    "banner_badge": "NEW",
+    "banner": "Free ERP readiness assessment — book your session",
+    "menu_open": "Open menu",
+    "menu_close": "Close menu",
+    "solutions": "Solutions",
+    "solutions_retail": "Retail",
+    "solutions_education": "Education",
+    "solutions_healthcare": "Healthcare",
+    "solutions_finance": "Finance",
+    "solutions_smes": "SMEs"
+  },
+  "footer": {
+    "tagline": "Custom ERP on Odoo — with AI that helps teams make smarter decisions.",
+    "quick_links": "Quick Links",
+    "services_heading": "Services",
+    "contact_heading": "Contact",
+    "implementation": "ERP Implementation",
+    "customization": "Custom Development",
+    "migration": "Business Process Analysis",
+    "support": "Ongoing Support",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "privacy_coming": "Privacy Policy (coming soon)",
+    "terms_coming": "Terms of Service (coming soon)",
+    "copyright": "© 2026 AIODYX. All rights reserved.",
+    "address": "Murabba 6479, Riyadh, Saudi Arabia",
+    "address_jordan": "Zahran St 34, Amman, Jordan",
+    "address_sa": "Murabba 6479, Riyadh, Saudi Arabia",
+    "phone": "+966 56 344 7279",
+    "phone_jordan": "+962 7 7599 9908",
+    "phone_sa": "+966 56 344 7279",
+    "office_jordan": "Jordan",
+    "office_sa": "Saudi Arabia",
+    "email": "hello@shamsieh.com",
+    "whatsapp": "WhatsApp",
+    "linkedin_label": "LinkedIn",
+    "facebook_label": "Facebook",
+    "newsletter": "Stay Updated",
+    "newsletter_placeholder": "Your email address",
+    "newsletter_btn": "Subscribe"
+  },
+  "common": {
+    "skip_to_content": "Skip to content",
+    "learn_more": "Learn More",
+    "contact_sales": "Contact Sales",
+    "request_demo": "Book Demo",
+    "request_consultation": "Request Consultation",
+    "view_all": "View All",
+    "get_started": "Get Started",
+    "read_more": "Read More",
+    "contact_us": "Contact Us"
+  },
+  "home": {
+    "hero": {
+      "badge": "Custom ERP Solutions",
+      "title_line1": "We Build a Custom ERP",
+      "title_line2": "For Your Business",
+      "subtitle": "AIODYX designs and builds ERP systems on Odoo — a real alternative to scattered spreadsheets and disconnected apps, with one system tailored to how you work.",
+      "cta_demo": "See How We Build",
+      "cta_consult": "Book Free Consultation",
+      "typing_prefix": "Built from",
+      "typing_words": "the ground up|your workflows|your teams|your operations",
+      "scroll_hint": "Scroll to explore"
+    },
+    "problems": {
+      "eyebrow": "Before We Build",
+      "title": "Your Business Runs on Separate Tools — Not One System",
+      "subtitle": "Before we build, we see the same symptoms in every company that reaches us without a unified system.",
+      "bridge": "AIODYX replaces disconnected tools with one integrated ERP designed specifically for how your business actually works.",
+      "p1": {
+        "title": "Scattered Data",
+        "text": "Every department keeps its own version of the truth — in files and systems that never talk to each other."
+      },
+      "p2": {
+        "title": "Manual Repetitive Work",
+        "text": "Hours are wasted every day moving data by hand between spreadsheets and disconnected apps."
+      },
+      "p3": {
+        "title": "Weak Cross-Department Communication",
+        "text": "Sales cannot see inventory, and accounting discovers the problem only after it is too late."
+      },
+      "p4": {
+        "title": "Limited Reporting",
+        "text": "Decision-makers lack real-time visibility into performance and trends."
+      },
+      "p5": {
+        "title": "Inventory Mistakes",
+        "text": "Stock discrepancies and fulfillment delays impact customer satisfaction."
+      },
+      "p6": {
+        "title": "Slow Approval Processes",
+        "text": "Purchase orders, expenses, and workflows get stuck in manual chains."
+      },
+      "p7": {
+        "title": "No Single Source of Truth",
+        "text": "Decisions are built on outdated or conflicting numbers across departments."
+      }
+    },
+    "flow": {
+      "eyebrow": "How We Build",
+      "title": "From Design to Launch — One Team Builds Your Full System",
+      "subtitle": "We design your system, build it on Odoo, and launch it with your real departments — not a ready-made platform you run alone.",
+      "left1": "Scattered data",
+      "left2": "Manual work",
+      "left3": "Siloed teams",
+      "hub": "AIODYX",
+      "hub_sub": "Unified ERP",
+      "right1": "Live finance",
+      "right2": "Connected sales",
+      "right3": "Clear operations",
+      "cta_demo": "Book Free Consultation",
+      "cta_more": "See how we build"
+    },
+    "hub": {
+      "eyebrow": "ERP Foundation",
+      "title": "One connected operational hub",
+      "subtitle": "ERP modules that feed your AI decision engine — configured for how you work.",
+      "cta_demo": "Request Demo",
+      "cta_modules": "Explore modules",
+      "tile_finance": "Finance",
+      "tile_crm": "CRM",
+      "tile_inventory": "Inventory",
+      "tile_hr": "HR",
+      "tile_projects": "Projects",
+      "tile_mfg": "Manufacturing",
+      "tile_bi": "Analytics",
+      "tile_ai": "AI"
+    },
+    "trust": {
+      "eyebrow": "Trusted By",
+      "title": "Not pushing... but all of them trusted us. Why wouldn't you?"
+    },
+    "services": {
+      "eyebrow": "What We Do",
+      "title": "Integrated ERP Solutions",
+      "subtitle": "AIODYX delivers end-to-end ERP solutions to help companies manage their business more efficiently.",
+      "implementation": {
+        "title": "ERP Implementation",
+        "text": "Full-cycle ERP deployment tailored to your business objectives and workflows."
+      },
+      "customization": {
+        "title": "Custom Development",
+        "text": "Systems designed and built to match your unique requirements and goals."
+      },
+      "migration": {
+        "title": "Business Process Analysis",
+        "text": "Thorough understanding of your operations before we design any solution."
+      },
+      "integration": {
+        "title": "System Integrations",
+        "text": "Connect your ERP with existing tools, APIs, and third-party platforms."
+      },
+      "support": {
+        "title": "Ongoing Technical Support",
+        "text": "Dedicated support that continues long after your system goes live."
+      },
+      "training": {
+        "title": "AI-Enhanced Solutions",
+        "text": "Business solutions powered by artificial intelligence for smarter operations."
+      },
+      "view_all": "View All Services"
+    },
+    "modules": {
+      "eyebrow": "System Components",
+      "title": "The Modules We Build Into Your System",
+      "subtitle": "Every module is built and connected to the others — not separate apps, but parts of one system.",
+      "finance": {
+        "name": "Finance & Accounting",
+        "desc": "Invoicing, expenses, and financial reports updated in real time.",
+        "f1": "General ledger and chart of accounts",
+        "f2": "Accounts payable and receivable",
+        "f3": "Financial reporting and dashboards",
+        "f4": "Tax compliance and audit trails",
+        "f5": "Budget planning and cost centers"
+      },
+      "crm": {
+        "name": "CRM & Sales",
+        "desc": "From lead to invoice — one connected path.",
+        "f1": "Lead and opportunity management",
+        "f2": "Sales pipeline and forecasting",
+        "f3": "Quotations and sales orders",
+        "f4": "Customer communication history",
+        "f5": "Commission and target tracking"
+      },
+      "inventory": {
+        "name": "Inventory & Procurement",
+        "desc": "Real-time stock control, warehousing, and purchasing workflows.",
+        "f1": "Multi-warehouse management",
+        "f2": "Purchase orders and vendor management",
+        "f3": "Stock valuation and reorder rules",
+        "f4": "Barcode and lot tracking",
+        "f5": "Supply chain visibility"
+      },
+      "hr": {
+        "name": "Human Resources",
+        "desc": "Employee files, leave, and evaluations in one place.",
+        "f1": "Employee database and org chart",
+        "f2": "Recruitment and applicant tracking",
+        "f3": "Leave and absence management",
+        "f4": "Performance evaluations",
+        "f5": "Document management"
+      },
+      "payroll": {
+        "name": "Attendance & Payroll",
+        "desc": "Attendance records turn automatically into accurate payroll.",
+        "f1": "Attendance and check-in tracking",
+        "f2": "Leave balance management",
+        "f3": "Payroll calculation and payslips",
+        "f4": "Overtime and shift management",
+        "f5": "Compliance with local labor rules"
+      },
+      "projects": {
+        "name": "Projects & Tasks",
+        "desc": "Track every task, resource, and deadline as work progresses.",
+        "f1": "Project planning and milestones",
+        "f2": "Task assignment and kanban boards",
+        "f3": "Timesheet and billing integration",
+        "f4": "Resource allocation",
+        "f5": "Project profitability reports"
+      },
+      "manufacturing": {
+        "name": "Manufacturing",
+        "desc": "Manufacturing orders, components, and inventory linked automatically.",
+        "f1": "Bill of materials management",
+        "f2": "Work orders and routing",
+        "f3": "Quality control checkpoints",
+        "f4": "MRP and demand planning",
+        "f5": "Shop floor tracking"
+      },
+      "support": {
+        "name": "Customer Support",
+        "desc": "Support tickets from every channel in one organized queue.",
+        "f1": "Ticket management and SLA tracking",
+        "f2": "Knowledge base articles",
+        "f3": "Customer portal access",
+        "f4": "Team assignment and escalation",
+        "f5": "Satisfaction surveys"
+      },
+      "bi": {
+        "name": "Business Intelligence",
+        "desc": "Dashboards that show your business performance in real time.",
+        "f1": "Custom dashboards and KPIs",
+        "f2": "Cross-module reporting",
+        "f3": "Scheduled report delivery",
+        "f4": "Data export and analysis",
+        "f5": "Executive summary views"
+      },
+      "ai": {
+        "name": "AI Automation",
+        "desc": "Routine tasks completed automatically — without manual intervention.",
+        "f1": "Automated data entry and validation",
+        "f2": "Smart notifications and alerts",
+        "f3": "Workflow automation rules",
+        "f4": "Document processing assistance",
+        "f5": "Predictive insights (based on implementation)"
+      }
+    },
+    "ai_section": {
+      "eyebrow": "Built Into Your System",
+      "title": "An Assistant That Understands Your ERP Data",
+      "subtitle": "Part of the system we build — not a separate add-on. It reads your ERP data directly and answers in plain language.",
+      "point1": "Ask in natural language — no complex reports or technical queries",
+      "point2": "Automatic reports generated from your real system data",
+      "point3": "Proactive alerts for low stock, shipment delays, or cost deviations — before they become problems",
+      "point4": "Answers grounded in live data across every department",
+      "point5": "Built into your ERP — not bolted on as a separate tool",
+      "assistant_label": "AIODYX Assistant",
+      "chip1": "Which products will run out this week?",
+      "chip2": "Summarize this month's sales performance",
+      "chip3": "Create my weekly report",
+      "chip4": "Which items are running low?",
+      "demo_user": "Which products will run out of stock this week?",
+      "demo_ai": "3 products will hit minimum reorder levels before Thursday, based on current sales velocity. Want me to create purchase orders for them?",
+      "chip5": "Who are my top customers?",
+      "chip6": "Predict next month cash flow"
+    },
+    "process": {
+      "eyebrow": "The Build Line",
+      "title": "Seven Stages — From Idea to a Working System",
+      "subtitle": "The same sequence on every project — clear building, no surprises.",
+      "step1": {
+        "title": "Discovery",
+        "label": "Discovery",
+        "text": "We understand your business, goals, and the problem the system is built to solve."
+      },
+      "step2": {
+        "title": "Analysis",
+        "label": "Business Analysis",
+        "text": "We map your current processes precisely before designing anything."
+      },
+      "step3": {
+        "title": "Design",
+        "label": "Solution Design",
+        "text": "We design your Odoo structure and the AI strategy that fits your operations."
+      },
+      "step4": {
+        "title": "Build",
+        "label": "Build & Configure",
+        "text": "We program and configure every module inside the system."
+      },
+      "step5": {
+        "title": "Migration",
+        "label": "Migration & QA",
+        "text": "We migrate your current data and test every real business scenario."
+      },
+      "step6": {
+        "title": "Launch",
+        "label": "Training & Launch",
+        "text": "We train your team on the system and launch it officially."
+      },
+      "step7": {
+        "title": "Support",
+        "label": "Ongoing Support",
+        "text": "We monitor performance, improve, and add new modules as your business grows."
+      }
+    },
+    "why": {
+      "eyebrow": "Why AIODYX",
+      "title": "Why Organizations Choose AIODYX",
+      "subtitle": "We are not a software reseller — we are the team that builds your system.",
+      "feature1": {
+        "title": "AI On Real Business Data",
+        "text": "Intelligence grounded in your ERP and systems — not generic chatbots."
+      },
+      "feature2": {
+        "title": "End-to-End Delivery",
+        "text": "From data integration and AI design to training and ongoing optimization."
+      },
+      "feature3": {
+        "title": "Enterprise Integrations",
+        "text": "Connect Odoo, SAP, Salesforce, commerce, and spreadsheets into one layer."
+      },
+      "feature4": {
+        "title": "Scalable Architecture",
+        "text": "The system grows with your business — without rebuilding from scratch later."
+      },
+      "feature5": {
+        "title": "Arabic & English Support",
+        "text": "A team that builds and explains in your language — no translation barriers at any stage."
+      },
+      "feature6": {
+        "title": "Practical Business Focus",
+        "text": "What we build is measured by results in your business — not by the number of features added."
+      }
+    },
+    "stats": {
+      "projects": "Projects Delivered",
+      "experts": "Odoo Experts",
+      "clients": "Happy Clients",
+      "satisfaction": "Client Satisfaction"
+    },
+    "testimonials": {
+      "eyebrow": "Testimonials",
+      "title": "What Our Clients Say",
+      "subtitle": "Hear from businesses that transformed their operations with AIODYX.",
+      "t1": {
+        "quote": "AIODYX transformed our entire operation. What used to take days now takes hours. Their team's expertise and dedication made our ERP implementation seamless.",
+        "name": "Ahmed Al-Rashid",
+        "role": "CEO, Gulf Manufacturing Co."
+      },
+      "t2": {
+        "quote": "The implementation was smooth and on schedule. Their consultants truly understood our retail business and configured Odoo perfectly for our needs.",
+        "name": "Sarah Mitchell",
+        "role": "Operations Director, Retail Plus"
+      },
+      "t3": {
+        "quote": "Outstanding support team. Any issue we face is resolved within hours. AIODYX has been an invaluable partner in our digital transformation journey.",
+        "name": "Dr. Khalid Hassan",
+        "role": "CTO, MedCare Group"
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "What is a customized ERP system?",
+        "answer": "A customized ERP system is configured and developed to match your specific business processes, workflows, and reporting needs — rather than forcing your team to adapt to generic software."
+      },
+      "q2": {
+        "question": "Can AIODYX customize Odoo for my business?",
+        "answer": "Yes — that is exactly what we build. We do not hand you a default Odoo copy; we deliver a system designed around your real processes from day one."
+      },
+      "q3": {
+        "question": "Can the system connect to our existing software?",
+        "answer": "Yes. We build integration points with the systems you want to keep — instead of replacing everything at once."
+      },
+      "q4": {
+        "question": "How long does it take to build a full ERP system?",
+        "answer": "It depends on the number of modules and the complexity of your processes. We set a clear timeline during the business analysis stage, before building begins."
+      },
+      "q5": {
+        "question": "Do you train our team to use the system?",
+        "answer": "Training is a core part of the launch stage — not a separate add-on service."
+      },
+      "q6": {
+        "question": "Does the system support Arabic and English together?",
+        "answer": "Yes, fully — the interface, reports, and technical support are available in both languages."
+      },
+      "q7": {
+        "question": "Does support continue after launch?",
+        "answer": "Yes. We monitor system performance and improve it continuously after launch, and add new modules when needed."
+      },
+      "q8": {
+        "question": "Can modules be added later?",
+        "answer": "Yes. ERP systems are modular by design. You can add new modules and capabilities as your business grows and requirements evolve."
+      }
+    },
+    "cta": {
+      "title": "Ready to Start Building Your System?",
+      "text": "A free 30-minute consultation to understand your business — no commitment.",
+      "demo": "Book Demo",
+      "consult": "Talk to an Expert",
+      "subtitle": "A free 30-minute consultation to understand your business — no commitment.",
+      "button": "Book Free Consultation",
+      "button_secondary": "Talk to an Expert"
+    },
+    "platform": {
+      "eyebrow": "AI Platform",
+      "title": "AI Solutions Built For Modern Businesses",
+      "subtitle": "Modular intelligence that turns enterprise data into insights, answers, and action.",
+      "analytics": {
+        "title": "AI Analytics",
+        "desc": "Turn business data into actionable insights.",
+        "f1": "Sales analytics",
+        "f2": "Performance dashboards",
+        "f3": "Revenue trends",
+        "f4": "AI reports"
+      },
+      "assistant": {
+        "title": "AI Business Assistant",
+        "desc": "Ask questions about your business and get intelligent answers.",
+        "example_user": "Why did sales decrease last month?",
+        "example_ai": "Sales dropped 14% because the electronics category decreased in Amman."
+      },
+      "finance": {
+        "title": "AI Finance Intelligence",
+        "desc": "Predict cash flow, analyze expenses, and forecast profit with confidence.",
+        "f1": "Cash flow prediction",
+        "f2": "Expense analysis",
+        "f3": "Profit forecasting"
+      },
+      "customer": {
+        "title": "AI Customer Intelligence",
+        "desc": "Understand customers, score leads, and reduce churn before it happens.",
+        "f1": "Customer segmentation",
+        "f2": "Lead scoring",
+        "f3": "Churn prediction"
+      },
+      "inventory": {
+        "title": "AI Inventory Intelligence",
+        "desc": "Anticipate stock needs and recommend smarter purchasing.",
+        "f1": "Stock prediction",
+        "f2": "Purchase recommendations",
+        "f3": "Slow-moving inventory detection"
+      }
+    },
+    "agents": {
+      "eyebrow": "AI Agents",
+      "title": "Your AI Employees",
+      "subtitle": "Specialized agents that work 24/7 — analyzing, reporting, and surfacing what matters.",
+      "sales": {
+        "title": "Sales Agent",
+        "f1": "Finds opportunities",
+        "f2": "Analyzes customers",
+        "f3": "Creates reports"
+      },
+      "finance": {
+        "title": "Finance Agent",
+        "f1": "Reviews financial performance",
+        "f2": "Detects risks",
+        "f3": "Flags anomalies"
+      },
+      "marketing": {
+        "title": "Marketing Agent",
+        "f1": "Analyzes campaigns",
+        "f2": "Suggests improvements",
+        "f3": "Tracks channel ROI"
+      },
+      "hr": {
+        "title": "HR Agent",
+        "f1": "Employee analytics",
+        "f2": "Workforce insights",
+        "f3": "Attendance patterns"
+      }
+    },
+    "industries": {
+      "eyebrow": "Industry Solutions",
+      "title": "Built For Your Industry",
+      "subtitle": "AIODYX adapts to how your sector operates — with intelligence tuned to your KPIs.",
+      "retail": {
+        "title": "Retail",
+        "text": "Sales prediction, inventory optimization, and customer analytics."
+      },
+      "education": {
+        "title": "Education",
+        "text": "Student analytics, enrollment prediction, and institution performance."
+      },
+      "healthcare": {
+        "title": "Healthcare",
+        "text": "Operational analytics and resource optimization."
+      },
+      "finance": {
+        "title": "Finance",
+        "text": "Risk detection and forecasting."
+      },
+      "smes": {
+        "title": "SMEs",
+        "text": "Simple AI dashboards and automated reports."
+      },
+      "cta": "Explore solution"
+    },
+    "integrations": {
+      "eyebrow": "Integrations",
+      "title": "Connect Your Business Systems",
+      "subtitle": "Bring data from the tools you already use into one intelligence layer.",
+      "step1": "Business Systems",
+      "step2": "AIODYX Intelligence Layer",
+      "step3": "Insights + Automation + Decisions",
+      "odoo": "Odoo",
+      "sap": "SAP",
+      "salesforce": "Salesforce",
+      "shopify": "Shopify",
+      "woo": "WooCommerce",
+      "postgres": "PostgreSQL",
+      "excel": "Excel",
+      "sheets": "Google Sheets"
+    },
+    "erp_layer": {
+      "eyebrow": "AIODYX + Odoo",
+      "title": "The Intelligence Layer For Your ERP",
+      "subtitle": "Odoo manages your operations. AIODYX understands your data and helps you make decisions.",
+      "point1": "Odoo ERP runs day-to-day operations",
+      "point2": "Secure API integration syncs live business data",
+      "point3": "AIODYX analyzes, predicts, and recommends",
+      "point4": "Your team gets answers, alerts, and automation",
+      "arch1": "Odoo ERP",
+      "arch2": "API Integration",
+      "arch3": "AIODYX",
+      "arch4": "Recommendations + Automation"
+    },
+    "cases": {
+      "eyebrow": "Case Studies",
+      "title": "See AI In Action",
+      "subtitle": "How organizations move from manual reporting to intelligent decisions.",
+      "retail": {
+        "title": "Retail Company",
+        "before_label": "Before",
+        "before": "Manual reports and slow decisions.",
+        "after_label": "After",
+        "after": "AI-powered insights and automated analysis."
+      },
+      "education": {
+        "title": "Education Platform",
+        "before_label": "Before",
+        "before": "Limited visibility across departments.",
+        "after_label": "After",
+        "after": "Predictive analytics and smarter decisions."
+      }
+    }
+  },
+  "services": {
+    "hero": {
+      "eyebrow": "AI Platform & ERP Foundation",
+      "title_line1": "AI Intelligence.",
+      "title_line2": "ERP Foundation.",
+      "subtitle": "From AI analytics and agents to ERP implementation — we connect your data, deliver insights, and keep operations running on a trusted foundation.",
+      "cta_demo": "Book Demo",
+      "cta_expert": "Talk to an Expert"
+    },
+    "trust": {
+      "implementations_value": "50+",
+      "implementations": "ERP Implementations",
+      "industries_value": "7+",
+      "industries": "Industries Served",
+      "experts_value": "15+",
+      "experts": "Odoo Experts",
+      "satisfaction_value": "98%",
+      "satisfaction": "Client Satisfaction"
+    },
+    "mid_cta": {
+      "title": "See AIODYX on your data",
+      "text": "Get a free AI readiness assessment — no commitment required.",
+      "btn": "Book Demo"
+    },
+    "intro": "AI-first offerings backed by enterprise ERP delivery:",
+    "categories": {
+      "eyebrow": "What We Deliver",
+      "title": "AI Platform & Foundation Services",
+      "analysis": "AI & Intelligence",
+      "implementation": "ERP Foundation",
+      "operations": "Operations & Support"
+    },
+    "bpa": {
+      "title": "Business Process Analysis",
+      "text": "Thorough analysis of your business operations to design the right solution.",
+      "d1": "Current-state process mapping",
+      "d2": "Gap analysis and recommendations",
+      "d3": "Requirements documentation",
+      "d4": "Solution roadmap"
+    },
+    "implementation": {
+      "title": "ERP Implementation",
+      "text": "Full-cycle ERP deployment tailored to your business objectives.",
+      "d1": "Module configuration",
+      "d2": "Workflow setup",
+      "d3": "User acceptance testing",
+      "d4": "Go-live support"
+    },
+    "customization": {
+      "title": "Custom Development",
+      "text": "Systems built specifically to match your unique requirements.",
+      "d1": "Custom modules and fields",
+      "d2": "Automated workflows",
+      "d3": "Custom reports and dashboards",
+      "d4": "API development"
+    },
+    "odoo": {
+      "title": "Odoo Customization",
+      "text": "Tailor Odoo modules to align with your specific business processes.",
+      "d1": "Module extensions",
+      "d2": "UI/UX customization",
+      "d3": "Business rule configuration",
+      "d4": "Third-party connectors"
+    },
+    "financial": {
+      "title": "Financial Management Systems",
+      "text": "Comprehensive financial reporting, accounting, and compliance tools.",
+      "d1": "Chart of accounts setup",
+      "d2": "Financial reporting",
+      "d3": "Tax configuration",
+      "d4": "Multi-currency support"
+    },
+    "hr": {
+      "title": "Human Resources & Payroll",
+      "text": "Employee management, payroll processing, and HR operations.",
+      "d1": "Employee records",
+      "d2": "Payroll processing",
+      "d3": "Leave management",
+      "d4": "Attendance tracking"
+    },
+    "project": {
+      "title": "Project & Task Management",
+      "text": "Plan, track, and deliver projects and tasks efficiently.",
+      "d1": "Project templates",
+      "d2": "Task assignment",
+      "d3": "Timesheet integration",
+      "d4": "Profitability tracking"
+    },
+    "attendance": {
+      "title": "Attendance & Time-Off Management",
+      "text": "Track attendance, leaves, and time-off requests seamlessly.",
+      "d1": "Check-in/check-out",
+      "d2": "Leave policies",
+      "d3": "Shift scheduling",
+      "d4": "Overtime tracking"
+    },
+    "sales_crm": {
+      "title": "Sales & CRM",
+      "text": "Manage leads, customers, and sales pipelines in one place.",
+      "d1": "Pipeline management",
+      "d2": "Quotation workflows",
+      "d3": "Customer segmentation",
+      "d4": "Sales analytics"
+    },
+    "inventory": {
+      "title": "Inventory & Warehouse Management",
+      "text": "Stock control, warehousing, and supply chain visibility.",
+      "d1": "Multi-warehouse setup",
+      "d2": "Stock valuation",
+      "d3": "Reorder rules",
+      "d4": "Barcode integration"
+    },
+    "procurement": {
+      "title": "Procurement Management",
+      "text": "Streamline purchasing, vendor management, and procurement workflows.",
+      "d1": "Purchase requisitions",
+      "d2": "Vendor evaluation",
+      "d3": "Approval workflows",
+      "d4": "Spend analysis"
+    },
+    "manufacturing": {
+      "title": "Manufacturing Solutions",
+      "text": "Production planning, quality control, and shop floor management.",
+      "d1": "BOM management",
+      "d2": "Work order routing",
+      "d3": "Quality checkpoints",
+      "d4": "MRP planning"
+    },
+    "integration": {
+      "title": "System Integration",
+      "text": "Connect your ERP with existing tools, APIs, and platforms.",
+      "d1": "API integrations",
+      "d2": "Data synchronization",
+      "d3": "Webhook configuration",
+      "d4": "Legacy system bridges"
+    },
+    "migration": {
+      "title": "Data Migration",
+      "text": "Safe migration from legacy systems with data validation.",
+      "d1": "Data mapping",
+      "d2": "Cleansing and validation",
+      "d3": "Test migrations",
+      "d4": "Cutover planning"
+    },
+    "training": {
+      "title": "Training & Documentation",
+      "text": "Comprehensive training programs and user documentation.",
+      "d1": "End-user training",
+      "d2": "Admin training",
+      "d3": "Video tutorials",
+      "d4": "Process documentation"
+    },
+    "reporting": {
+      "title": "Reporting & Dashboards",
+      "text": "Custom reports and executive dashboards for data-driven decisions.",
+      "d1": "KPI dashboards",
+      "d2": "Scheduled reports",
+      "d3": "Cross-module analytics",
+      "d4": "Export automation"
+    },
+    "ai": {
+      "title": "AI & Workflow Automation",
+      "text": "Intelligent automation designed to reduce manual work.",
+      "d1": "Workflow automation",
+      "d2": "Smart notifications",
+      "d3": "Document processing",
+      "d4": "AI assistant setup"
+    },
+    "support": {
+      "title": "Technical Support",
+      "text": "Continuous support, maintenance, and system optimization.",
+      "d1": "Helpdesk support",
+      "d2": "System monitoring",
+      "d3": "Version upgrades",
+      "d4": "Performance optimization"
+    },
+    "industries": {
+      "eyebrow": "Industries",
+      "title": "Solutions Across Sectors",
+      "subtitle": "We adapt ERP implementations to the specific needs of different industries.",
+      "note": "Don't see your sector? We configure ERP solutions for a wide range of business models.",
+      "note_cta": "Discuss your sector",
+      "explore": "Explore solutions",
+      "retail": "Retail & E-commerce",
+      "retail_desc": "Unify POS, inventory, and online sales to reduce stockouts and speed up fulfillment.",
+      "retail_t1": "POS",
+      "retail_t2": "Inventory",
+      "retail_t3": "E-commerce",
+      "manufacturing": "Manufacturing",
+      "manufacturing_desc": "Plan production, control quality, and cut downtime with integrated MRP.",
+      "manufacturing_t1": "MRP",
+      "manufacturing_t2": "Quality",
+      "manufacturing_t3": "Planning",
+      "healthcare": "Healthcare",
+      "healthcare_desc": "Streamline billing, compliance, and patient operations in one system.",
+      "healthcare_t1": "Billing",
+      "healthcare_t2": "Compliance",
+      "healthcare_t3": "Operations",
+      "education": "Education",
+      "education_desc": "Automate enrollment, finance, and administration across campuses.",
+      "education_t1": "Enrollment",
+      "education_t2": "Finance",
+      "education_t3": "Administration",
+      "construction": "Construction",
+      "construction_desc": "Track projects, procurement, and job costing with real-time visibility.",
+      "construction_t1": "Projects",
+      "construction_t2": "Procurement",
+      "construction_t3": "Job costing",
+      "government": "Government",
+      "government_desc": "Deliver transparent workflows and audit-ready public-sector reporting.",
+      "government_t1": "Reporting",
+      "government_t2": "Transparency",
+      "government_t3": "Workflows",
+      "ngos": "NGOs & Non-profits",
+      "ngos_desc": "Manage grants, programs, and donor reporting with full accountability.",
+      "ngos_t1": "Grants",
+      "ngos_t2": "Programs",
+      "ngos_t3": "Donors"
+    },
+    "cta": {
+      "title": "Ready to Connect Your Business?",
+      "text": "Tell us about your project and our team will craft a tailored solution for your business.",
+      "demo": "Book Demo",
+      "consult": "Talk to an Expert"
+    },
+    "ai_platform": {
+      "title": "AI Platform Setup",
+      "text": "Deploy AI analytics, assistants, and agents on top of your business systems.",
+      "d1": "AI assistant configuration",
+      "d2": "Analytics dashboards",
+      "d3": "Agent workflows",
+      "d4": "Data connection design"
+    },
+    "ai_agents": {
+      "title": "AI Agents",
+      "text": "Specialized agents for sales, finance, marketing, and HR that work around the clock.",
+      "d1": "Sales & opportunity agents",
+      "d2": "Finance risk agents",
+      "d3": "Marketing insight agents",
+      "d4": "HR workforce agents"
+    },
+    "ai_analytics": {
+      "title": "AI Analytics",
+      "text": "Turn ERP and enterprise data into predictive insights and executive reports.",
+      "d1": "KPI dashboards",
+      "d2": "Predictive models",
+      "d3": "Automated reports",
+      "d4": "Anomaly detection"
+    }
+  },
+  "about": {
+    "hero": {
+      "title": "About AIODYX",
+      "title_prefix": "About",
+      "subtitle": "We build an AI decision layer on top of ERP and enterprise data — so teams ask better questions and act faster.",
+      "eyebrow": "Our Story",
+      "cta_demo": "Book Demo",
+      "cta_approach": "Our Approach"
+    },
+    "methodology": {
+      "eyebrow": "Our Methodology",
+      "title": "How We Work With You",
+      "subtitle": "A structured approach that puts your business needs at the center of every decision.",
+      "step1": {
+        "title": "Listen & Understand",
+        "text": "We start by learning how your business operates today."
+      },
+      "step2": {
+        "title": "Design & Plan",
+        "text": "We architect a solution aligned with your goals and constraints."
+      },
+      "step3": {
+        "title": "Build & Deliver",
+        "text": "We implement, test, and train your team for a smooth launch."
+      },
+      "step4": {
+        "title": "Support & Evolve",
+        "text": "We stay with you to optimize and grow your system over time."
+      }
+    },
+    "mission": {
+      "title": "Our Mission",
+      "text": "Our mission is your success — empowering businesses with AI that understands their data and ERP foundations built for how they actually work."
+    },
+    "vision": {
+      "title": "Our Vision",
+      "text": "To become the leading AI business intelligence platform in the region — powered by trusted ERP data and practical automation."
+    },
+    "values": {
+      "eyebrow": "Our Values",
+      "title": "What We Stand For",
+      "understand": {
+        "title": "We Understand First",
+        "text": "We care to the point where we thoroughly understand your business so we can provide the best experience and support possible."
+      },
+      "custom": {
+        "title": "Custom-Made for You",
+        "text": "We design a custom-made experience for each one of our customers, because every company has its own requirements."
+      },
+      "evolution": {
+        "title": "Continuous Evolution",
+        "text": "We stay on top of the latest innovations and practices to keep your business up to date and growing."
+      },
+      "partnership": {
+        "title": "Long-Term Partnership",
+        "text": "Our relationship doesn't end at launch — we continue through support, development, and follow-up."
+      },
+      "support": {
+        "title": "We've Got You",
+        "text": "You can call us, spam us, or ask us the tiniest question. We're here to support you at all times."
+      }
+    },
+    "story": {
+      "eyebrow": "Who We Are",
+      "title": "A Journey That Starts Today and Continues",
+      "quote": "At AIODYX, we believe technology is a tool to simplify business.",
+      "p1": "We noticed that many companies rely on separate systems — and even after adopting ERP, they still struggle to turn data into decisions.",
+      "p2": "From this insight, AIODYX was founded to deliver an AI intelligence layer that connects enterprise data and helps teams decide with confidence.",
+      "p3": "We design practical AI and ERP solutions that support your growth — and we walk with you from integration to continuous improvement."
+    },
+    "team": {
+      "eyebrow": "Leadership",
+      "title": "Message from the CEO",
+      "subtitle": "Guiding AIODYX with a focus on solving real business problems across the region."
+    },
+    "ceo": {
+      "title": "Message from the CEO",
+      "lead": "We did not start to build software for its own sake.",
+      "p1": "We started to solve problems. Every platform we implement and every ERP solution we deliver is driven by one question:",
+      "quote": "Will this make a meaningful difference for our clients?",
+      "p2": "That mindset guides our work as we help organizations across Jordan and Saudi Arabia connect their operations through practical, integrated systems.",
+      "closing": "Thank you for your interest in AIODYX.",
+      "name": "Mohaned Salah",
+      "role": "Chief Executive Officer"
+    },
+    "locations": {
+      "eyebrow": "Regional Presence",
+      "title": "Where We Operate",
+      "subtitle": "Offices in Jordan and Saudi Arabia — serving clients across the region.",
+      "jordan": {
+        "country": "Jordan",
+        "address": "Zahran St 34, Amman, Jordan",
+        "phone": "+962 7 7599 9908"
+      },
+      "saudi": {
+        "country": "Saudi Arabia",
+        "address": "Murabba 6479, Riyadh, Saudi Arabia",
+        "phone": "+966 56 344 7279"
+      },
+      "hours": "Sun–Thu: 8 AM – 4 PM · Fri & Sat: Closed"
+    },
+    "media": {
+      "eyebrow": "Connect With Us",
+      "title": "Media & Channels",
+      "subtitle": "Follow our work, watch our story, or reach us directly on your preferred channel.",
+      "video_title": "IT Solutions Overview",
+      "video_caption": "See how we approach business platforms and ERP delivery.",
+      "whatsapp": "Chat on WhatsApp",
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook"
+    },
+    "cta": {
+      "title": "Ready to Connect Your Business?",
+      "text": "Let's discuss how AIODYX can help streamline your business operations.",
+      "demo": "Request Demo",
+      "consult": "Talk to an Expert"
+    }
+  },
+  "contact": {
+    "hero": {
+      "title": "Get in Touch",
+      "subtitle": "Ready to explore a customized ERP solution? We'd love to hear from you."
+    },
+    "form": {
+      "title": "Send Us a Message",
+      "subtitle": "Fill out the form and our team will get back to you within 24 hours.",
+      "name": "Full Name",
+      "email": "Email Address",
+      "company": "Company Name",
+      "phone": "Phone Number",
+      "country": "Country",
+      "country_placeholder": "Select your country",
+      "service": "Service Interest",
+      "service_placeholder": "Select a service",
+      "service_impl": "ERP Implementation",
+      "service_custom": "Custom Development",
+      "service_migration": "Data Migration",
+      "service_integration": "System Integration",
+      "service_support": "Technical Support",
+      "service_training": "Training & Documentation",
+      "service_ai": "AI & Automation",
+      "service_other": "Other",
+      "contact_method": "Preferred Contact Method",
+      "method_email": "Email",
+      "method_phone": "Phone",
+      "method_either": "Either",
+      "message": "Your Message",
+      "consent": "I agree to be contacted by AIODYX regarding my inquiry. I understand my data will be handled according to the privacy policy.",
+      "submit": "Send Message",
+      "submitting": "Sending...",
+      "success": "Thank you! Your message has been sent successfully. We'll be in touch soon.",
+      "error": "Something went wrong. Please try again or email us directly.",
+      "error_dev": "Form submission is not yet connected to a backend. Please email us directly at hello@aiodyx.com.",
+      "error_rate_limit": "Too many submissions. Please wait an hour and try again.",
+      "error_required": "This field is required",
+      "error_email": "Please enter a valid email address",
+      "error_minlength": "Please enter at least the minimum required characters",
+      "error_consent": "You must agree to be contacted"
+    },
+    "info": {
+      "title": "Contact Information",
+      "address_label": "Office Address",
+      "phone_label": "Phone",
+      "email_label": "Email",
+      "hours_label": "Business Hours",
+      "hours": "Sun–Thu: 8 AM – 4 PM · Fri & Sat: Closed",
+      "whatsapp_label": "WhatsApp",
+      "office_jordan": "Jordan Office",
+      "office_sa": "Saudi Arabia Office",
+      "address_jordan": "Zahran St 34, Amman, Jordan",
+      "address_sa": "Murabba 6479, Riyadh, Saudi Arabia",
+      "phone_jordan": "+962 7 7599 9908",
+      "phone_sa": "+966 56 344 7279",
+      "social_label": "Follow Us",
+      "map_text": "Visit us",
+      "map_directions": "Open in Google Maps",
+      "map_jordan_desc": "Zahran St 34, Amman — find directions below or open in your maps app.",
+      "map_saudi_desc": "Murabba 6479, Riyadh — find directions below or open in your maps app."
+    }
+  },
+  "industries": {
+    "shared": {
+      "cta_title": "Ready to apply AI to your industry?",
+      "cta_subtitle": "Book a demo and see how AIODYX adapts to your workflows.",
+      "cta_button": "Book Demo",
+      "features_eyebrow": "Capabilities",
+      "usecases_eyebrow": "AI Use Cases"
+    },
+    "retail": {
+      "eyebrow": "Retail",
+      "title": "AI That Predicts Demand And Protects Margin",
+      "subtitle": "Sales prediction, inventory optimization, and customer analytics for modern retail.",
+      "f1": "Sales prediction",
+      "f2": "Inventory optimization",
+      "f3": "Customer analytics",
+      "u1": "Forecast peak seasons and stockouts",
+      "u2": "Identify best-sellers and slow movers",
+      "u3": "Segment customers for smarter campaigns"
+    },
+    "education": {
+      "eyebrow": "Education",
+      "title": "Institution Intelligence For Better Outcomes",
+      "subtitle": "Student analytics, enrollment prediction, and performance visibility.",
+      "f1": "Student analytics",
+      "f2": "Enrollment prediction",
+      "f3": "Institution performance",
+      "u1": "Spot at-risk enrollment trends early",
+      "u2": "Measure program and campus performance",
+      "u3": "Automate operational reports for leadership"
+    },
+    "healthcare": {
+      "eyebrow": "Healthcare",
+      "title": "Operational Clarity For Care Delivery",
+      "subtitle": "Operational analytics and resource optimization for healthcare teams.",
+      "f1": "Operational analytics",
+      "f2": "Resource optimization",
+      "f3": "Workload visibility",
+      "u1": "Balance staffing against demand",
+      "u2": "Track operational bottlenecks",
+      "u3": "Surface resource risks before they escalate"
+    },
+    "finance": {
+      "eyebrow": "Finance",
+      "title": "Risk Detection And Forecasting Built In",
+      "subtitle": "Financial intelligence that helps teams act before numbers slip.",
+      "f1": "Risk detection",
+      "f2": "Forecasting",
+      "f3": "Expense intelligence",
+      "u1": "Flag cash-flow and expense anomalies",
+      "u2": "Forecast revenue and collections",
+      "u3": "Brief leadership with AI-generated summaries"
+    },
+    "smes": {
+      "eyebrow": "SMEs",
+      "title": "Enterprise AI Without Enterprise Complexity",
+      "subtitle": "Simple AI dashboards and automated reports for growing businesses.",
+      "f1": "Simple AI dashboards",
+      "f2": "Automated reports",
+      "f3": "Guided insights",
+      "u1": "Ask plain-language questions about your data",
+      "u2": "Get weekly reports without spreadsheets",
+      "u3": "Grow into full ERP + AI as you scale"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or may have moved.",
+    "back_home": "Back to home",
+    "contact": "Contact us",
+    "try": "Or try"
+  }
+}
