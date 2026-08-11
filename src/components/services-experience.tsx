@@ -12,7 +12,8 @@ export function ServicesExperience() {
     <StoryPage
       beats={SERVICES_BEATS}
       scene={(reduced) => <ServicesScene reduced={reduced} />}
-      // Wider lens: a corridor needs peripheral vision to read as travel
+      // Wide lens: the rig is tall and the camera climbs it from close range,
+      // so the perspective is what sells the height.
       fov={58}
       bloom={0.6}
     >

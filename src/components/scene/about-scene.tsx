@@ -173,45 +173,322 @@ const ROUTE_LINE = (() => {
 /* ------------------------------------------------------------- buildings */
 
 /**
- * A small skyline that rises out of each office city on the final beat.
+ * The two office cities, built the same way as everything else in this scene:
+ * geometry and a shader, no texture and no model.
  *
- * Deterministic footprints and heights — no RNG during render, so the two
- * cities look the same on every load and on the server.
+ * A box with an emissive tint reads as a coloured slab — which is exactly how
+ * the first version looked. What turns a box into a building is the facade: a
+ * window grid at a *constant physical pitch*, so every tower shares a floor
+ * height and the cluster gains a sense of scale from its own detail. The rest
+ * is silhouette — setbacks, masts and beacons.
  */
-/**
- * A skyline, not a row of identical boxes.
- *
- * Each tower gets its own footprint (w ≠ d), its own turn about the vertical,
- * and a height that varies enough to give the cluster a silhouette. The
- * tallest ones carry a narrower lit crown, which is what reads as "tower"
- * rather than "block" at a distance.
- */
-type Plot = {
+
+type Tower = {
   x: number;
   z: number;
   w: number;
   d: number;
   h: number;
+  /** Turn about the vertical, so the cluster isn't a grid of aligned boxes. */
   rot: number;
-  crown?: number;
+  /** Seeds the window pattern — no two towers light the same rooms. */
+  seed: number;
+  /** Narrower section stacked on the roof. `inset` is a fraction of w/d. */
+  setback?: { h: number; inset: number };
+  /** Mast rising above the highest roof; its tip carries a beacon. */
+  spire?: number;
 };
 
-const PLOTS: Plot[] = [
-  { x: 0.0, z: 0.0, w: 0.032, d: 0.026, h: 0.4, rot: 0.2, crown: 0.1 },
-  { x: 0.05, z: 0.03, w: 0.024, d: 0.03, h: 0.29, rot: 0.9, crown: 0.07 },
-  { x: -0.045, z: 0.042, w: 0.03, d: 0.022, h: 0.33, rot: 0.45, crown: 0.08 },
-  { x: 0.032, z: -0.052, w: 0.022, d: 0.026, h: 0.19, rot: 1.2 },
-  { x: -0.038, z: -0.036, w: 0.028, d: 0.02, h: 0.24, rot: 0.05 },
-  { x: 0.086, z: -0.012, w: 0.02, d: 0.024, h: 0.15, rot: 0.7 },
-  { x: -0.088, z: 0.004, w: 0.023, d: 0.019, h: 0.21, rot: 1.05 },
-  { x: 0.012, z: 0.086, w: 0.021, d: 0.027, h: 0.31, rot: 0.35, crown: 0.06 },
-  { x: 0.066, z: -0.07, w: 0.018, d: 0.021, h: 0.13, rot: 0.55 },
-  { x: -0.07, z: -0.068, w: 0.02, d: 0.017, h: 0.17, rot: 1.35 },
-  { x: 0.104, z: 0.062, w: 0.017, d: 0.022, h: 0.11, rot: 0.15 },
-  { x: -0.024, z: 0.116, w: 0.019, d: 0.018, h: 0.14, rot: 0.8 },
-  { x: -0.115, z: 0.072, w: 0.016, d: 0.02, h: 0.1, rot: 1.1 },
-  { x: 0.078, z: 0.104, w: 0.018, d: 0.016, h: 0.16, rot: 0.6 },
+/**
+ * A deterministic downtown: tall in the core, falling away to low blocks at
+ * the edges so the cluster meets the ground instead of ending in a cliff.
+ *
+ * Tallest total is 0.34 + 0.11 + 0.05 = 0.50, which is the roofline <Marker>
+ * assumes when it parks the city label at 0.62.
+ */
+const TOWERS: Tower[] = [
+  { x: 0.0, z: 0.0, w: 0.03, d: 0.026, h: 0.34, rot: 0.2, seed: 1, setback: { h: 0.11, inset: 0.62 }, spire: 0.05 },
+  { x: 0.052, z: 0.03, w: 0.026, d: 0.03, h: 0.27, rot: 0.92, seed: 2, setback: { h: 0.07, inset: 0.66 } },
+  { x: -0.046, z: 0.043, w: 0.03, d: 0.023, h: 0.3, rot: 0.45, seed: 3, setback: { h: 0.08, inset: 0.58 }, spire: 0.04 },
+  { x: 0.033, z: -0.053, w: 0.023, d: 0.027, h: 0.19, rot: 1.22, seed: 4 },
+  { x: -0.039, z: -0.037, w: 0.028, d: 0.021, h: 0.23, rot: 0.05, seed: 5, setback: { h: 0.05, inset: 0.7 } },
+  { x: 0.088, z: -0.013, w: 0.021, d: 0.025, h: 0.15, rot: 0.7, seed: 6 },
+  { x: -0.09, z: 0.005, w: 0.024, d: 0.02, h: 0.21, rot: 1.05, seed: 7 },
+  { x: 0.013, z: 0.088, w: 0.022, d: 0.028, h: 0.29, rot: 0.35, seed: 8, setback: { h: 0.06, inset: 0.6 }, spire: 0.035 },
+  { x: 0.068, z: -0.072, w: 0.019, d: 0.022, h: 0.13, rot: 0.55, seed: 9 },
+  { x: -0.072, z: -0.07, w: 0.021, d: 0.018, h: 0.17, rot: 1.35, seed: 10 },
+  { x: 0.107, z: 0.064, w: 0.018, d: 0.023, h: 0.11, rot: 0.15, seed: 11 },
+  { x: -0.025, z: 0.119, w: 0.02, d: 0.019, h: 0.14, rot: 0.8, seed: 12 },
+  { x: -0.118, z: 0.074, w: 0.017, d: 0.021, h: 0.1, rot: 1.1, seed: 13 },
+  { x: 0.08, z: 0.107, w: 0.019, d: 0.017, h: 0.16, rot: 0.6, seed: 14 },
+  { x: -0.14, z: -0.03, w: 0.022, d: 0.018, h: 0.07, rot: 0.3, seed: 15 },
+  { x: 0.13, z: -0.098, w: 0.018, d: 0.02, h: 0.06, rot: 0.95, seed: 16 },
+  { x: -0.052, z: -0.128, w: 0.02, d: 0.016, h: 0.08, rot: 1.25, seed: 17 },
+  { x: 0.036, z: 0.148, w: 0.017, d: 0.019, h: 0.05, rot: 0.42, seed: 18 },
 ];
+
+/** Window size in local units. Constant across every tower — that's the point. */
+const WINDOW_PITCH = new THREE.Vector2(0.0062, 0.0104);
+
+/**
+ * Shared by both cities. `uReveal` rides the same landing ramp that raises the
+ * towers, so the lights come up as the city does rather than snapping on.
+ */
+const CITY_UNIFORMS = {
+  uTime: { value: 0 },
+  uReveal: { value: 0 },
+};
+
+const FACADE_VERT = /* glsl */ `
+  attribute float aSeed;
+  attribute vec3 aDim;
+
+  varying vec3 vPos;
+  varying vec3 vNrm;
+  varying vec3 vNrmView;
+  varying vec3 vNrmWorld;
+  varying vec3 vToCam;
+  varying float vSeed;
+  varying vec3 vDim;
+
+  void main() {
+    vPos = position;
+    vNrm = normal;
+    vSeed = aSeed;
+    vDim = aDim;
+    vNrmView = normalMatrix * normal;
+    vNrmWorld = normalize(mat3(modelMatrix) * normal);
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vToCam = -mv.xyz;
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const FACADE_FRAG = /* glsl */ `
+  uniform vec3 uAccent;
+  uniform vec3 uWarm;
+  uniform vec2 uPitch;
+  uniform float uTime;
+  uniform float uReveal;
+
+  varying vec3 vPos;
+  varying vec3 vNrm;
+  varying vec3 vNrmView;
+  varying vec3 vNrmWorld;
+  varying vec3 vToCam;
+  varying float vSeed;
+  varying vec3 vDim;
+
+  float hash21(vec2 p) {
+    p = fract(p * vec2(127.1, 311.7));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
+  }
+
+  void main() {
+    vec3 n = normalize(vNrm);
+    bool roof = abs(n.y) > 0.5;
+
+    // Facade coordinates. Horizontal runs along whichever axis this face
+    // spans, vertical is height above the section's own base. Both stay in
+    // local units, so the window pitch is a physical size rather than a
+    // fraction of the face — which is what keeps a squat block and a tower
+    // reading at the same scale.
+    float sideX = step(0.5, abs(n.x));
+    float horiz = mix(vPos.x, vPos.z, sideX);
+    float halfSpan = mix(vDim.x, vDim.z, sideX) * 0.5;
+
+    // --- body ------------------------------------------------------------
+    // Kept deliberately dark. The accent colours differ a lot in luminance —
+    // Amman's lavender is far lighter than Riyadh's teal — so a body tint
+    // bright enough to see washed one city out into plastic while the other
+    // looked right. Concrete at night is nearly black; the windows carry the
+    // colour, and that reads the same whatever the accent.
+    float gy = clamp(vPos.y / max(vDim.y, 1e-4), 0.0, 1.0);
+    vec3 col = mix(vec3(0.010, 0.010, 0.018), uAccent * 0.075, gy);
+    if (roof) col = vec3(0.018, 0.018, 0.028) + uAccent * 0.03;
+
+    // One fixed key direction so the four faces don't sit at identical value.
+    // Without it a box is a flat silhouette with no volume at all.
+    float key = 0.5 + 0.5 * dot(vNrmWorld, normalize(vec3(0.45, 0.62, 0.38)));
+    col *= 0.45 + key * 0.75;
+
+    // --- windows ----------------------------------------------------------
+    if (!roof) {
+      vec2 g = vec2(horiz, vPos.y) / uPitch;
+      vec2 cell = floor(g);
+      vec2 f = fract(g);
+      // Derivative-width antialiasing. Without it the grid moirés into noise
+      // the moment the city is more than a few units away.
+      vec2 aa = fwidth(g) * 0.75 + 1e-4;
+
+      float wx = smoothstep(0.18 - aa.x, 0.18 + aa.x, f.x) *
+                 (1.0 - smoothstep(0.82 - aa.x, 0.82 + aa.x, f.x));
+      float wy = smoothstep(0.26 - aa.y, 0.26 + aa.y, f.y) *
+                 (1.0 - smoothstep(0.80 - aa.y, 0.80 + aa.y, f.y));
+      float pane = wx * wy;
+
+      // Occupancy is deterministic, with a slow drift so the city isn't a
+      // frozen photograph — a handful of rooms change over on a long cycle.
+      float r = hash21(cell + vSeed * 17.3);
+      float lit = step(0.44, r);
+      float phase = floor(uTime * 0.14 + r * 9.0);
+      lit = mix(lit, step(0.58, hash21(cell + phase * 5.7 + vSeed)), 0.3);
+
+      // Mostly the city's own colour, a few warm rooms to break the monotone
+      vec3 pane_col = mix(uAccent, uWarm, step(0.74, hash21(cell.yx + vSeed * 4.1)));
+      col += pane_col * pane * lit * (0.55 + r * 0.9) * 1.5 * uReveal;
+
+      // Corner mullions — the vertical edges that stop a tower reading as a
+      // rectangle of noise
+      float corner = smoothstep(halfSpan * 0.74, halfSpan * 0.99, abs(horiz));
+      col += uAccent * corner * 0.28 * uReveal;
+    }
+
+    // --- rim ---------------------------------------------------------------
+    // Just enough to separate the tower from the sky behind it. Any stronger
+    // and every face at a grazing angle floods, which is the same washout the
+    // body tint causes.
+    float fres = pow(1.0 - clamp(dot(normalize(vNrmView), normalize(vToCam)), 0.0, 1.0), 3.0);
+    col += uAccent * fres * 0.32;
+
+    gl_FragColor = vec4(col, 1.0);
+
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * Box with its base at y=0 and the two attributes the facade shader needs: a
+ * per-building seed, and the section's own dimensions so the shader knows
+ * where its edges are. Cached — the two cities share every geometry.
+ */
+const SECTIONS = new Map<string, THREE.BoxGeometry>();
+
+function section(w: number, h: number, d: number, seed: number) {
+  const key = `${w}|${h}|${d}|${seed}`;
+  let g = SECTIONS.get(key);
+  if (!g) {
+    g = new THREE.BoxGeometry(w, h, d);
+    g.translate(0, h / 2, 0);
+    const count = g.attributes.position.count;
+    const seeds = new Float32Array(count).fill(seed);
+    const dims = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      dims[i * 3] = w;
+      dims[i * 3 + 1] = h;
+      dims[i * 3 + 2] = d;
+    }
+    g.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
+    g.setAttribute("aDim", new THREE.BufferAttribute(dims, 3));
+    SECTIONS.set(key, g);
+  }
+  return g;
+}
+
+/**
+ * Materials are cached per accent colour, and the shared uniform objects are
+ * spread in by reference — so one write to CITY_UNIFORMS drives both cities.
+ */
+const FACADES = new Map<string, THREE.ShaderMaterial>();
+
+function facade(accent: string) {
+  let m = FACADES.get(accent);
+  if (!m) {
+    m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...CITY_UNIFORMS,
+        uAccent: { value: new THREE.Color(accent) },
+        uWarm: { value: new THREE.Color("#FFD2A0") },
+        uPitch: { value: WINDOW_PITCH },
+      },
+      vertexShader: FACADE_VERT,
+      fragmentShader: FACADE_FRAG,
+    });
+    FACADES.set(accent, m);
+  }
+  return m;
+}
+
+const MASTS = new Map<string, THREE.MeshBasicMaterial>();
+
+function mast(accent: string) {
+  let m = MASTS.get(accent);
+  if (!m) {
+    m = new THREE.MeshBasicMaterial({ color: new THREE.Color(accent).multiplyScalar(0.5) });
+    MASTS.set(accent, m);
+  }
+  return m;
+}
+
+/** Aircraft warning lights. Opacity is driven per-frame from <Globe>. */
+const BEACONS = new Map<string, THREE.MeshBasicMaterial>();
+
+function beacon(accent: string) {
+  let m = BEACONS.get(accent);
+  if (!m) {
+    m = new THREE.MeshBasicMaterial({
+      color: "#FFFFFF",
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    BEACONS.set(accent, m);
+  }
+  return m;
+}
+
+/**
+ * Ground haze: the spill a lit city throws onto the land around it, plus a
+ * faint street grid. Without it the towers look like they were dropped on the
+ * sphere rather than standing on it.
+ *
+ * The disc lies in the tangent plane, so its rim floats ~0.012 above the
+ * surface rather than sinking into it — additive, so that reads as glow.
+ */
+const GROUNDS = new Map<string, THREE.ShaderMaterial>();
+
+function ground(accent: string) {
+  let m = GROUNDS.get(accent);
+  if (!m) {
+    m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...CITY_UNIFORMS,
+        uAccent: { value: new THREE.Color(accent) },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uAccent;
+        uniform float uReveal;
+        varying vec2 vUv;
+        void main() {
+          vec2 p = vUv * 2.0 - 1.0;
+          float glow = pow(1.0 - smoothstep(0.0, 1.0, length(p)), 2.4);
+          vec2 g = abs(fract(p * 6.0) - 0.5);
+          float street = 1.0 - smoothstep(0.0, 0.07, min(g.x, g.y));
+          float a = glow * (0.2 + street * 0.42) * uReveal;
+          if (a < 0.002) discard;
+          gl_FragColor = vec4(uAccent * (0.7 + street * 0.6), a);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }
+      `,
+    });
+    GROUNDS.set(accent, m);
+  }
+  return m;
+}
 
 const UP = new THREE.Vector3(0, 1, 0);
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
@@ -241,35 +518,52 @@ function Skyline({
       quaternion={quaternion}
       scale={[0.35, 0.001, 0.35]}
     >
-      {PLOTS.map((b, i) => (
-        <group key={i} position={[b.x, 0, b.z]} rotation={[0, b.rot, 0]}>
-          {/* Shaft — dark body so the silhouette reads against the sky */}
-          <mesh position={[0, b.h / 2, 0]}>
-            <boxGeometry args={[b.w, b.h, b.d]} />
-            <meshStandardMaterial
-              color="#0A0A12"
-              emissive={color}
-              emissiveIntensity={0.35}
-              roughness={0.45}
-              metalness={0.35}
-            />
-          </mesh>
+      {/* Flat, so the city's Y-scale rise leaves it alone */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.0015, 0]}
+        material={ground(color)}
+      >
+        <circleGeometry args={[0.21, 48]} />
+      </mesh>
 
-          {/* Lit crown on the tall ones — the detail that makes them towers */}
-          {b.crown && (
-            <mesh position={[0, b.h + b.crown / 2, 0]}>
-              <boxGeometry args={[b.w * 0.55, b.crown, b.d * 0.55]} />
-              <meshStandardMaterial
-                color="#0A0A12"
-                emissive={color}
-                emissiveIntensity={1.9}
-                roughness={0.3}
-                metalness={0.4}
+      {TOWERS.map((b) => {
+        const roof = b.h + (b.setback?.h ?? 0);
+        return (
+          <group key={b.seed} position={[b.x, 0, b.z]} rotation={[0, b.rot, 0]}>
+            <mesh geometry={section(b.w, b.h, b.d, b.seed)} material={facade(color)} />
+
+            {/* The setback restarts the window grid at its own base, which is
+                how a real stepped tower reads. */}
+            {b.setback && (
+              <mesh
+                position={[0, b.h, 0]}
+                geometry={section(
+                  b.w * b.setback.inset,
+                  b.setback.h,
+                  b.d * b.setback.inset,
+                  b.seed + 0.37,
+                )}
+                material={facade(color)}
               />
-            </mesh>
-          )}
-        </group>
-      ))}
+            )}
+
+            {b.spire && (
+              <>
+                <mesh position={[0, roof + b.spire / 2, 0]} material={mast(color)}>
+                  <cylinderGeometry args={[0.0006, 0.0014, b.spire, 5]} />
+                </mesh>
+                {/* Small enough to read as a light. At 0.0034 it was a ball on
+                    a stick — a warning beacon is a point, and bloom is what
+                    gives it its size on screen. */}
+                <mesh position={[0, roof + b.spire, 0]} material={beacon(color)}>
+                  <sphereGeometry args={[0.0015, 8, 8]} />
+                </mesh>
+              </>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -380,30 +674,148 @@ function ValueSatellites({ reduced }: { reduced: boolean }) {
   );
 }
 
+/**
+ * Callout geometry, in city-local units.
+ *
+ * The label used to sit straight up at 0.62 — directly over the roofline — and
+ * the street-level camera cropped it off the top of the frame every time. It
+ * now stands off to one side at skyline height with a leader back to the
+ * cluster, which is both in frame and reads as an annotation of *that* city
+ * rather than text that happens to float nearby.
+ */
+const LABEL_UP = 0.3;
+const LABEL_OUT = 0.32;
+/** The tallest tower's roof is at 0.45; the node sits at the foot of its mast. */
+const LEADER_TOP = 0.46;
+
+/**
+ * The label holds a constant *screen* size instead of a constant world size.
+ *
+ * A world-sized label cannot serve both ends of this page: the camera is ~1
+ * unit from the city at street level and ~5.4 out at orbit, so text big enough
+ * to read from orbit is wider than the frame up close — which is why the old
+ * label could only survive by being centred over the skyline. Scaling by
+ * distance makes it an annotation rather than an object, readable at both.
+ *
+ * The scale is applied *inside* the reveal group and compensates only for the
+ * globe's scale, never the reveal's — so the reveal still shrinks the callout
+ * away to nothing, which is what hides it.
+ */
+const LABEL_K = 0.23;
+
+/**
+ * The leader line, one per city, built by hand because `<line>` in JSX
+ * resolves to the SVG element rather than R3F's.
+ *
+ * Module scope rather than `useMemo` on purpose: its three vertices are
+ * rewritten every frame, and a memoised value is not allowed to be mutated
+ * after render. Keyed by label so two cities can never share one line.
+ */
+const LEADERS = new Map<string, THREE.Line>();
+
+function leaderLine(key: string, accent: string) {
+  let l = LEADERS.get(key);
+  if (!l) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(new Float32Array(9), 3),
+    );
+    l = new THREE.Line(
+      g,
+      new THREE.LineBasicMaterial({ color: accent, transparent: true, opacity: 0.5 }),
+    );
+    // Positions are rewritten every frame, so the baked bounding sphere is
+    // wrong the moment the camera moves.
+    l.frustumCulled = false;
+    LEADERS.set(key, l);
+  }
+  return l;
+}
+
 function Marker({
   at,
   label,
   color,
   matRef,
   groupRef,
+  side,
 }: {
   at: THREE.Vector3;
   label: string;
   color: string;
   matRef: React.RefObject<THREE.MeshBasicMaterial | null>;
   groupRef: React.RefObject<THREE.Group | null>;
+  /** +1 places the callout on the camera's right, -1 on its left. */
+  side: 1 | -1;
 }) {
-  /**
-   * Label offset, expressed relative to the city — NOT to the globe centre.
-   *
-   * The tallest tower reaches 0.5 above the surface (0.4 shaft + 0.1 crown).
-   * 0.62 sits just over the roofline — enough to clear it, close enough that
-   * the label stays in frame during the street-level visit.
-   */
-  const labelOffset = useMemo(
-    () => at.clone().normalize().multiplyScalar(0.62),
-    [at],
+  const upLocal = useMemo(() => at.clone().normalize(), [at]);
+  const nodeAt = useMemo(
+    () => upLocal.clone().multiplyScalar(LEADER_TOP),
+    [upLocal],
   );
+  const billboard = useRef<THREE.Group>(null);
+
+  const outer = useRef<THREE.Group>(null);
+  const scratch = useMemo(
+    () => ({
+      right: new THREE.Vector3(),
+      q: new THREE.Quaternion(),
+      pos: new THREE.Vector3(),
+      scale: new THREE.Vector3(),
+    }),
+    [],
+  );
+
+  useFrame(({ camera }) => {
+    const b = billboard.current;
+    if (!b || !b.parent || !outer.current) return;
+    const { right, q, pos, scale } = scratch;
+
+    // Which way is "right" is only knowable at render time: the marker is a
+    // child of the spinning globe, so take the camera's own right vector and
+    // bring it back into this marker's frame.
+    right.setFromMatrixColumn(camera.matrixWorld, 0);
+    b.parent.getWorldQuaternion(q).invert();
+    right.applyQuaternion(q);
+    // Flatten onto the local ground plane. Without this the callout rides the
+    // camera's roll up and down instead of holding its height beside the city.
+    right.addScaledVector(upLocal, -right.dot(upLocal));
+    if (right.lengthSq() < 1e-6) return;
+    right.normalize().multiplyScalar(side);
+
+    b.position
+      .copy(upLocal)
+      .multiplyScalar(LABEL_UP)
+      .addScaledVector(right, LABEL_OUT);
+
+    // Constant apparent size. The outer group carries no scale of its own, so
+    // its world scale is the globe's — divide it out and the reveal scale is
+    // the only one left multiplying through.
+    outer.current.getWorldPosition(pos);
+    outer.current.getWorldScale(scale);
+    b.scale.setScalar(
+      (LABEL_K * camera.position.distanceTo(pos)) / Math.max(scale.x, 1e-4),
+    );
+
+    // Leader: off the tallest roof, out and down to label height, then a short
+    // horizontal run into the text. Fetched from the module-scope table inside
+    // the callback — binding it to a local in the render body makes it a value
+    // the compiler forbids mutating afterwards.
+    const line = LEADERS.get(label);
+    if (!line) return;
+    const attr = line.geometry.attributes.position;
+    const a = attr.array as Float32Array;
+    const elbow = LABEL_OUT * 0.5;
+    const end = LABEL_OUT - 0.022;
+    for (let i = 0; i < 3; i++) {
+      const axis = i === 0 ? "x" : i === 1 ? "y" : "z";
+      a[i] = upLocal[axis] * LEADER_TOP;
+      a[3 + i] = upLocal[axis] * LABEL_UP + right[axis] * elbow;
+      a[6 + i] = upLocal[axis] * LABEL_UP + right[axis] * end;
+    }
+    attr.needsUpdate = true;
+  });
 
   return (
     /* Two nested groups on purpose. The outer one is fixed at the city; the
@@ -411,27 +823,37 @@ function Marker({
        Scaling a group that sits at the globe's origin also scales its
        children's position vectors, so at scale 0.5 the label was sitting at
        radius ~1.2 — inside the planet, well below the towers. Scaling in
-       place at the city keeps it above the skyline at every size. */
-    <group position={at}>
+       place at the city keeps it beside the skyline at every size. */
+    <group ref={outer} position={at}>
       <group ref={groupRef} scale={0.001}>
         <mesh>
           <sphereGeometry args={[0.045, 16, 16]} />
           <meshBasicMaterial ref={matRef} color={color} transparent opacity={0} />
         </mesh>
-      {/* Billboarded: the label is a child of the rotating globe, so without
-          this it turns with the sphere and renders back-to-front — the text
-          came out mirrored once the globe settled. */}
-        {/* Big enough to read from orbit — the globe renders at ~0.7 scale, so
-            the original 0.12 came out around 0.08 world units — but not so big
-            that it swamps the frame during the street-level visit. */}
-        <Billboard position={labelOffset}>
+
+        <primitive object={leaderLine(label, color)} />
+
+        {/* Node where the leader leaves the skyline. Kept to a dot — at 0.011
+            it was a bubble stuck to the roof, wider than the tower it marks. */}
+        <mesh position={nodeAt}>
+          <sphereGeometry args={[0.0042, 8, 8]} />
+          <meshBasicMaterial color={color} />
+        </mesh>
+
+        {/* Billboarded: the label is a child of the rotating globe, so without
+            this it turns with the sphere and renders back-to-front — the text
+            came out mirrored once the globe settled.
+
+            Anchored on its inner edge so it reads outward from the leader
+            rather than straddling it. */}
+        <Billboard ref={billboard}>
           <Text
-            fontSize={0.17}
+            fontSize={0.15}
             color={color}
-            anchorX="center"
+            anchorX={side > 0 ? "left" : "right"}
             anchorY="middle"
             letterSpacing={0.12}
-            outlineWidth={0.012}
+            outlineWidth={0.011}
             outlineColor="#05050a"
           >
             {label.toUpperCase()}
@@ -530,14 +952,27 @@ function Globe({
     // Offices surface at the end. While standing in one city, the other's
     // label drops away — at close range two billboards on a globe this size
     // sit right on top of each other.
-    const ammanVis = landing * (1 - atRiyadh * 0.92);
-    const riyadhVis = landing * (1 - atAmman * 0.92);
+    //
+    // They also stand down for the close beat: that one is centred copy over
+    // the whole globe and it names both offices in its own text, so a pair of
+    // callouts holding screen size across the middle of the frame is competing
+    // with the headline to say something the headline already says.
+    const settled = 1 - beat(p, closeFrom, 1);
+    const ammanVis = landing * (1 - atRiyadh * 0.92) * settled;
+    const riyadhVis = landing * (1 - atAmman * 0.92) * settled;
 
+    // The dot marks the city from orbit. Standing in the city it is a solid
+    // ball the width of three towers, parked in the middle of downtown — so it
+    // fades out on approach and lets the skyline do the marking. Faded on the
+    // material rather than the group, because the group scale also carries the
+    // label, which we still want overhead.
     if (ammanMat.current) {
-      ammanMat.current.opacity = damp(ammanMat.current.opacity, ammanVis, 3, dt);
+      const v = ammanVis * (1 - atAmman * 0.95);
+      ammanMat.current.opacity = damp(ammanMat.current.opacity, v, 3, dt);
     }
     if (riyadhMat.current) {
-      riyadhMat.current.opacity = damp(riyadhMat.current.opacity, riyadhVis, 3, dt);
+      const v = riyadhVis * (1 - atRiyadh * 0.95);
+      riyadhMat.current.opacity = damp(riyadhMat.current.opacity, v, 3, dt);
     }
     if (ammanMarker.current) {
       const g2 = ammanMarker.current;
@@ -556,6 +991,28 @@ function Globe({
       const lateral = damp(city.scale.x, 0.35 + landing * 0.65, 3.4, dt);
       city.scale.x = lateral;
       city.scale.z = lateral;
+    }
+
+    // Window lights come up with the city rather than snapping on. The slow
+    // occupancy drift and the beacons are motion, so they stop when asked to.
+    CITY_UNIFORMS.uReveal.value = damp(CITY_UNIFORMS.uReveal.value, landing, 3, dt);
+    if (!reduced) CITY_UNIFORMS.uTime.value = state.clock.elapsedTime;
+
+    let b = 0;
+    for (const m of BEACONS.values()) {
+      // Offset per city so the two skylines don't strobe in lockstep
+      const phase = b++ * 1.9;
+      // Floored well above zero: a beacon that spends most of its cycle dim
+      // reads as a grey bead rather than a light that happens to flash.
+      const blink = reduced
+        ? 0.75
+        : 0.5 +
+          0.5 *
+            Math.pow(
+              Math.max(0, Math.sin(state.clock.elapsedTime * 1.5 + phase)),
+              6,
+            );
+      m.opacity = landing * blink;
     }
 
     ROUTE_UNIFORMS.uShow.value = damp(ROUTE_UNIFORMS.uShow.value, landing, 3, dt);
@@ -606,12 +1063,17 @@ function Globe({
       <Skyline at={ammanPos} color="#A78BFA" groupRef={ammanCity} />
       <Skyline at={riyadhPos} color="#6FCBE2" groupRef={riyadhCity} />
 
+      {/* Each callout stands opposite its own copy column. <StoryOverlay>
+          alternates the text by beat index — amman is odd so its copy sits
+          right, riyadh is even so its copy sits left — and a callout on the
+          same side lands straight on the headline. */}
       <Marker
         at={ammanPos}
         label={AMMAN.label}
         color="#A78BFA"
         matRef={ammanMat}
         groupRef={ammanMarker}
+        side={-1}
       />
       <Marker
         at={riyadhPos}
@@ -619,6 +1081,7 @@ function Globe({
         color="#6FCBE2"
         matRef={riyadhMat}
         groupRef={riyadhMarker}
+        side={1}
       />
     </group>
   );
@@ -682,14 +1145,16 @@ function OrbitRig({
 
         // Stand back far enough that the whole cluster fits — at 0.88 the
         // camera was inside the skyline and the near towers filled the frame
-        // edge-on, which is what made them read as bars.
+        // edge-on, which is what made them read as bars. Widened again once
+        // the towers grew masts: the tallest reaches 0.50 and its beacon was
+        // being cropped off the top of the frame.
         perch
           .copy(city)
-          .addScaledVector(normal, 0.26)
-          .addScaledVector(tangent, 0.86);
+          .addScaledVector(normal, 0.28)
+          .addScaledVector(tangent, 0.92);
 
         // Aim at mid-tower height so the skyline stands up in frame
-        aim.copy(city).addScaledVector(normal, 0.19);
+        aim.copy(city).addScaledVector(normal, 0.21);
 
         x = THREE.MathUtils.lerp(x, perch.x, visiting);
         y = THREE.MathUtils.lerp(y, perch.y, visiting);

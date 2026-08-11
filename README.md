@@ -7,7 +7,7 @@ story.
 | Page | Metaphor | Motion |
 |---|---|---|
 | `/` | Eight Odoo apps assembling into a wired ring | Convergence + orbit |
-| `/services` | A corridor of seven gates | Forward travel |
+| `/services` | A system building itself, tier by tier | Ascent |
 | `/about` | A dotted globe that settles on the region | Rotation |
 | `/contact` | Amman ↔ Riyadh, an arc and a slow pulse | Almost still |
 
@@ -195,8 +195,8 @@ colour the text is.
 
 `<StoryPage bold>` adds `.story--bold` to the copy layer. Services uses it.
 
-Its scene is thin lines and small gates, so the default weight left the copy
-floating and weak against the corridor. Bold pushes the title to **800 / 92px**
+Its scene is thin bright lines on black, so the default weight left the copy
+floating and weak against the rig. Bold pushes the title to **800 / 92px**
 with `-0.045em` tracking, the body to 500 at near-full contrast, and the pills
 to 600.
 
@@ -210,6 +210,55 @@ Two things that matter:
 The 3D station labels get a thin `outlineWidth` in their own colour rather than
 a heavier weight — troika can't synthesise one from the default face, so the
 outline is what gives them presence to match.
+
+## Services: the build line
+
+The copy on this page is "Seven Stages — From Idea to a Working System … clear
+building, no surprises". That is a story about something being *made*, so the
+scene makes it. The whole seven-tier blueprint stands from the first frame, and
+each tier turns from drawing into structure as its stage takes the frame. You
+are always at the frontier: finished, lit structure below you, drawing above.
+The camera climbs it.
+
+**This replaced a corridor of rings the camera flew through.** Flying past
+seven near-identical gates showed the *count* of the stages and nothing else —
+stage two and stage six looked the same, and the screen at the end of the page
+looked like the screen at the start. Nothing was ever built. Ascent also keeps
+this page distinct from the other three: home converges, about rotates, contact
+barely moves.
+
+**`beat()` latching is the whole mechanism here.** Everywhere else in this
+codebase a one-sided ramp is the bug that parks a camera forever. A build wants
+exactly that: a stage that is finished does not un-finish as you scroll past
+it, so `buildOf()` is deliberately one-sided and the structure below you stays
+standing. Summing all seven gives a continuous 0→7 frontier that drives the
+tiers, the spine's live height, and the camera in one value — they cannot drift
+apart because they are the same number.
+
+Three things that were wrong on the first pass, all of them about a scene
+competing with its own page rather than about the geometry:
+
+- **The cold open was gated on scroll and the hero rendered black.** Fading the
+  blueprint up over the first 5% threw away the one image that makes the page's
+  argument — the shape of the finished thing, drawn, before any of it exists.
+  The plan is up from the first frame; the damp from zero is the entrance.
+- **The ground grid became the loudest thing on the page.** The camera looks
+  along the ground for most of the climb, so any grid with reach fills the
+  lower half of the frame. It is a reference for the ascent, not scenery:
+  faint, and faded out by radius 15.
+- **The close is centred copy with pills and buttons**, so the rig steps out of
+  the middle rather than standing behind it, and the seven tier captions fade.
+  Aiming left of the axis is what puts the axis right of frame — and since
+  `lookAt` hasn't run yet, the camera's right vector has to come from the orbit
+  angle: looking inward from angle `a`, right is `(sin a, 0, −cos a)`.
+
+Tier captions stand opposite their own copy column, by the same rule the about
+callouts follow — tier `i` is beat `i + 1`, so odd beats put their copy right.
+
+The modules are the one part of the rig that is *lit* rather than drawn. A flat
+basic material made them read as cardboard pinned to the frame; they are the
+solid thing the drawing turns into, so they get a real material and a key
+light. Emissive stays low for the same reason it does on the about skyline.
 
 ## About: three acts, not one spinning globe
 
@@ -226,10 +275,79 @@ the page changes what it's doing as you go:
    **city skylines rise out of the surface** at Amman and Riyadh, with the
    route arc pulsing between them.
 
-The skylines are eight boxes each on deterministic footprints, oriented by a
-quaternion from `(0,1,0)` to the surface normal so "up" for a building is the
+The skylines are eighteen towers each on deterministic footprints, oriented by
+a quaternion from `(0,1,0)` to the surface normal so "up" for a building is the
 globe's normal. They scale on **Y only**, so the cities grow out of the ground
 rather than ballooning into existence.
+
+### What makes a box read as a building
+
+The first version was boxes with an emissive tint, and they read as exactly
+that — coloured slabs. Three things fixed it, and only one of them is geometry:
+
+**The window grid is a physical size, not a UV fraction.** `BoxGeometry` gives
+every face UV 0→1 regardless of how big the face is, so a UV-space grid puts
+the same window count on a squat block and a 30-storey tower — which destroys
+the sense of scale instead of creating it. The facade shader derives its
+coordinates from *local position* instead (`aDim` carries each section's own
+dimensions), so `WINDOW_PITCH` is a floor height every tower shares. That
+shared floor height is what tells you how big the cluster is.
+
+**The body has to stay nearly black.** The two accents differ a lot in
+luminance — Amman's lavender against Riyadh's teal — so any body tint bright
+enough to see washed one city into plastic while the other looked right. The
+windows carry the colour; concrete at night is close to black, and that reads
+the same whatever the accent.
+
+**A beacon is a point, not a sphere.** At radius 0.0034 the warning lights were
+balls on sticks. Bloom is what gives a light its size on screen, so the mesh
+wants to be small (0.0015) and bright, with its blink floored well above zero —
+a beacon that spends most of its cycle dim reads as a grey bead.
+
+Silhouette does the rest: setbacks that restart the window grid at their own
+base, masts on the tall ones, and low blocks at the edges so the cluster meets
+the ground instead of ending in a cliff. Deriving the facade from position also
+means the window pattern is seeded per building (`aSeed`), so no two towers
+light the same rooms, and it survives the Y-only rise — the grid squashes with
+the tower as it grows.
+
+The marker dot fades out on approach. It exists to find the city from orbit; at
+street level it is a solid ball three towers wide parked in the middle of
+downtown. It fades on the **material**, not the group, because the group scale
+also carries the city callout, which is still wanted.
+
+### The city callout
+
+`AMMAN` and `RIYADH` used to sit straight up at 0.62, directly over the
+roofline, and the street-level camera cropped them off the top of frame every
+time. They are now callouts standing off to one side at skyline height, with a
+leader line back to a node on the tallest tower.
+
+**Which way is "right" is only knowable at render time.** The marker is a child
+of the spinning globe, so the offset is rebuilt each frame from the camera's
+own right vector, brought into the marker's frame and flattened onto the local
+ground plane — without the flatten, the callout rides the camera's roll up and
+down instead of holding its height beside the city.
+
+**The label holds a constant screen size, not a constant world size.** No
+single world size works: the camera is ~1 unit from the city at street level
+and ~5.4 out at orbit, so text big enough to read from orbit is wider than the
+whole frame up close — which is the only reason the old label could survive
+centred over the skyline. Scaling by camera distance makes it an annotation
+rather than an object. The scale divides out the *globe's* scale but never the
+reveal's, so the reveal still shrinks the callout away to nothing, which is
+what hides it.
+
+**Each callout stands opposite its own copy column.** `<StoryOverlay>`
+alternates the text by beat index — amman is odd so its copy sits right, riyadh
+is even so its copy sits left — and a callout on the same side lands straight
+on the headline. They both stand down for the `close` beat, which is centred
+copy over the whole globe and already names both offices in its own text.
+
+The leader line is module scope rather than `useMemo`, keyed per city: its
+three vertices are rewritten every frame, and a memoised value is not allowed
+to be mutated after render. Binding it to a local in the render body trips the
+same rule, so the frame loop fetches it from the table by key.
 
 **Set hidden initial state in JSX, not in the frame loop.** The skylines and
 markers first shipped at the default scale of 1 and damped *down* toward zero,
@@ -273,9 +391,10 @@ Each cost real debugging time and none are obvious from the API:
    black. The About prism uses separate plates instead.
 2. **`<line>` in JSX resolves to the SVG element**, not R3F's. Build a
    `THREE.Line` and mount it with `<primitive object={...} />`.
-3. **A corridor's radius must fit inside the frustum at reading distance.**
-   Gates at radius 3.1 with fov 58 sat entirely off-screen — the corridor
-   rendered perfectly and was invisible. 1.95 works.
+3. **Anything ring-shaped around the camera must fit inside the frustum at
+   reading distance.** The corridor this page used to be put its gates at
+   radius 3.1 with fov 58, which sat entirely off-screen: it rendered
+   perfectly and was invisible.
 
 Plus: `beat()` clamps to 1 and stays there, so any one-sided ramp parks a
 camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.

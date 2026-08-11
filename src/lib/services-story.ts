@@ -12,12 +12,15 @@ export const STAGES = [
   "step7",
 ] as const;
 
-/** Depth of each station down the corridor. Camera flies toward -Z. */
-export const STATION_GAP = 9;
+/** Vertical spacing of the seven tiers. The camera climbs +Y as they build. */
+export const TIER_GAP = 1.8;
 
-export const stationZ = (i: number) => -4 - i * STATION_GAP;
+export const tierY = (i: number) => i * TIER_GAP;
 
-/** Hue per station — a slow violet→cyan traverse as you go deeper. */
+/** Top of the finished structure. */
+export const TOP_Y = tierY(STAGES.length - 1);
+
+/** Hue per stage — a slow violet→cyan traverse as the build rises. */
 export const STATION_COLORS = [
   "#A78BFA",
   "#9F8BF7",
