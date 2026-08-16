@@ -1,0 +1,108 @@
+/* ==================================================================
+   Credibility markers on the story pages
+   ------------------------------------------------------------------
+   Quiet by construction. These sit under a headline on a black,
+   moving scene, so they are small, low-contrast and structural — a
+   visitor who is looking for them finds them, and a visitor reading
+   the story is not interrupted by a badge shouting at them.
+   ================================================================== */
+
+.trust {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+  color: var(--paper-faint);
+}
+
+/* Centred beats centre their own text; the flex row has to be told. */
+.beat__inner[style*="center"] .trust {
+  justify-content: center;
+}
+
+.trust__odoo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trust__odoo img {
+  /* The mark carries its own colour and reads as itself on black. */
+  height: 19px;
+  width: auto;
+}
+
+.trust__sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.trust__fact {
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------- offices */
+
+/* Kept tight: this is the last thing above the logotype the field resolves
+   into, and every millimetre here pushes the mark off the bottom of frame. */
+.offices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  text-align: start;
+}
+
+.offices__card {
+  flex: 1 1 15rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--paper) 12%, transparent);
+  border-radius: 12px;
+  /* Solid, not glass: a translucent panel over a moving scene is the
+     legibility trap this codebase keeps re-learning. */
+  background: #0a0a12;
+}
+
+.offices__country {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+  margin-bottom: 0.5rem;
+}
+
+.offices__line {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--paper-dim);
+}
+
+.offices__tel {
+  display: inline-block;
+  margin-top: 0.15rem;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+
+.offices__tel:hover {
+  color: var(--accent-bright);
+}
+
+.offices__hours {
+  flex: 1 1 100%;
+  margin-top: -0.1rem;
+  font-size: 0.75rem;
+  color: var(--paper-faint);
+}
+
+@media (max-width: 640px) {
+  .offices__card {
+    flex-basis: 100%;
+  }
+}

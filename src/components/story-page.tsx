@@ -37,6 +37,7 @@ export function StoryPage({
   fov = 42,
   bloom = 0.72,
   showHint = false,
+  intro,
   children,
 }: {
   beats: Beat[];
@@ -46,6 +47,8 @@ export function StoryPage({
   fov?: number;
   bloom?: number;
   showHint?: boolean;
+  /** Rendered inside the opening beat. */
+  intro?: ReactNode;
   children?: ReactNode;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -68,7 +71,7 @@ export function StoryPage({
       <Stage fov={fov} bloom={bloom}>
         {scene(reduced)}
       </Stage>
-      <StoryOverlay beats={beats} align={align}>
+      <StoryOverlay beats={beats} align={align} intro={intro}>
         {children}
       </StoryOverlay>
       {showHint && (

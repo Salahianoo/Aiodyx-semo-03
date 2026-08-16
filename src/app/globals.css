@@ -215,10 +215,32 @@ body {
 }
 
 .nav__brand {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  display: block;
   color: var(--paper);
+}
+
+.nav__mark {
+  display: block;
+  height: 19px;
+  width: auto;
+}
+
+/* Home is white; the other three are near-black. Only colour differs. */
+.nav[data-theme="light"] {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0));
+}
+
+.nav[data-theme="light"] .nav__brand {
+  color: #1a2340;
+}
+
+.nav[data-theme="light"] .nav__link {
+  color: #5a6478;
+}
+
+.nav[data-theme="light"] .nav__link[data-active="true"],
+.nav[data-theme="light"] .nav__link:hover {
+  color: #0a1024;
 }
 
 .nav__list {

@@ -22,11 +22,15 @@ import type { Beat } from "@/lib/story";
 export function StoryOverlay({
   beats,
   align = "alternate",
+  intro,
   children,
 }: {
   beats: Beat[];
   /** "alternate" staggers left/right; "center" keeps every beat centred. */
   align?: "alternate" | "center";
+  /** Rendered inside the opening beat — the things a visitor needs before
+   *  they have scrolled anywhere, like who this is and what it is built on. */
+  intro?: ReactNode;
   /** Rendered inside the final beat — CTAs, a form, anything interactive. */
   children?: ReactNode;
 }) {
@@ -148,6 +152,7 @@ export function StoryOverlay({
                   ))}
                 </ul>
               )}
+              {i === 0 && intro}
               {i === beats.length - 1 && children}
             </div>
           </section>

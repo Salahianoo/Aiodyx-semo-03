@@ -1,12 +1,12 @@
 # Eight apps, one system
 
 A four-page scroll-driven 3D site for AIODYX. Each page gets its **own** spatial
-metaphor — repeating one motion three times would read as a template, not a
+metaphor — repeating one motion four times would read as a template, not a
 story.
 
 | Page | Metaphor | Motion |
 |---|---|---|
-| `/` | Eight Odoo apps assembling into a wired ring | Convergence + orbit |
+| `/` | One field of points, re-formed eight times | Transformation in place |
 | `/services` | A system building itself, tier by tier | Ascent |
 | `/about` | A dotted globe that settles on the region | Rotation |
 | `/contact` | Amman ↔ Riyadh, an arc and a slow pulse | Almost still |
@@ -27,28 +27,114 @@ That restraint is the design decision, not an omission.
 
 ---
 
-The home story: your Odoo apps — Sales, Purchases, Inventory, Manufacturing,
-Accounting, CRM, HR, Projects — start as scattered islands and assemble into one
-wired system as you scroll.
-
 ```bash
 npm run dev     # PORT=3001 npm run dev if 3000 is taken
 npm run build
 npm run lint
 ```
 
-## No AI video, and no asset pipeline
+## Home: one field, re-formed eight times
 
-Everything on screen is generated in code. There is no `.glb`, no image
-sequence, no rendered frames, no external texture.
+Every other page here builds an object and moves a camera around it. Home has
+no object. The same twelve thousand points are the scattered data, the
+assembled core, the ten modules and the logotype, and the story is the
+transitions between those states.
 
-That was deliberate. Scroll-driven means **the visitor owns the timeline**, so
-the visual has to be scrubbable in both directions at arbitrary speed. AI video
-generators produce a fixed clip that is temporally unstable — the "Inventory"
-panel would morph and flicker between frames, which destroys the entire premise
-that these are the *same eight modules* throughout. Real-time WebGL is
+Nothing is created or destroyed the whole way down, which is the argument the
+page is making: these are not separate tools that get replaced, it is the same
+material organised.
+
+| Beat | Formation |
+|---|---|
+| open | a wide, faint haze, well behind the copy |
+| problems ×2 | seven clumps that never touch |
+| flow | the clumps drawn inward on a twist |
+| assembly | one dense shell — the point of the page |
+| modules ×10 | the shell opened out into ten seated clusters |
+| ai | every cluster wired through the middle |
+| why | a lattice; six columns, because there are six reasons |
+| close | the AIODYX logotype |
+
+That also settles the motion problem. Home cannot converge-and-orbit without
+repeating what it used to do, and it cannot climb or rotate without repeating
+services and about. Transformation in place is nobody else's.
+
+### Eight attributes, not a morph target
+
+Each point carries all eight of its positions at once (`aPos0`…`aPos7`) and the
+vertex shader sums them against eight uniform weights. A frame costs one
+multiply-add per formation, the CPU touches nothing but the weights, and there
+is no per-frame buffer upload and no interpolation state anywhere.
+
+Which means the scene is a **pure function of scroll position**. Scrubbing
+backwards is not a reversal that has to be computed, it is the same evaluation
+at a smaller number — so the field cannot drift out of sync with the copy
+however fast the timeline is dragged. This is the same interruptibility
+principle as `damp()`, reached by removing the state instead of taming it.
+
+Weights come from one anchor per beat at the centre of its *measured* range,
+blended with `smooth()` between the two the scroll currently sits between. The
+accumulation is `+=` rather than `=` because consecutive beats often share a
+formation — all ten module beats rest on the ring — and the two halves have to
+add back up to one.
+
+### The logotype is rasterised, not traced
+
+The finale fills the mark's outlines onto a canvas and samples the opaque
+pixels. Rasterising is the only way to get a *fill*: walking the path data
+gives the outline, and the logotype would come out hollow.
+
+Both axes come back normalised to ±0.5 against their **own** dimension, so
+scaling them by the same number squares up a mark that is nearly five times
+wider than it is tall. The first version filled the entire frame with what
+looked like vertical columns.
+
+### Three things that were wrong on the first pass
+
+- **Points at 2.6 against a 300-unit scale** put ~46px sprites on screen.
+  Twelve thousand of those, additive, is twenty million fragments a frame: it
+  saturated to flat white and dropped the framerate far enough to be visible in
+  a screenshot script.
+- **Boosting colour, alpha and size together** blew the focused cluster into a
+  solid white disc. It lost its hue, which is the only thing identifying it,
+  and the grain that makes it read as a cloud of records rather than a blob.
+- **A ring at radius 5.5** fitted the frame's width and was cropped top and
+  bottom — the corridor mistake in a different shape. Anything ring-shaped has
+  to fit the frustum's *short* axis.
+
+During the tour the ring turns to bring the active cluster to twelve o'clock,
+so every module gets the same composed presentation. Twelve o'clock and not
+the side away from the copy, which was the first instinct: `<StoryOverlay>`
+alternates the column every beat, so "opposite the copy" would have flipped the
+ring 180° ten times.
+
+## No AI video, and almost no asset pipeline
+
+Everything on screen is generated in code, including the ERP mockups. The only
+binary assets in the repo are two SVG logos — the AIODYX wordmark and Odoo's —
+and both are vector, inline-able and a few KB.
+
+For the 3D pages that was deliberate. Scroll-driven means **the visitor owns the
+timeline**, so the visual has to be scrubbable in both directions at arbitrary
+speed. AI video generators produce a fixed clip that is temporally unstable —
+the "Inventory" panel would morph and flicker between frames, which destroys the
+entire premise that these are the *same modules* throughout. Real-time WebGL is
 scrubbable, resolution-independent, relabelable without re-rendering, and ships
 in ~150KB rather than tens of megabytes of frames.
+
+### Two things about the logos
+
+**The wordmark is inlined, not an `<img>`.** The source hard-codes its fills in
+a `<style>` block, which an `<img>` tag seals off — and the mark has to sit on
+one white page and three near-black ones. Inlined, "ODYX" takes `currentColor`
+and only the "AI" monogram keeps a fixed colour. Brand navy `#13308a` is right
+on white and invisible on black, so the dark pages pass a lifted tint.
+
+**Crop a logo's viewBox with `getBBox()`, not by reading its path data.** Both
+files float their artwork inside a much larger canvas — Odoo's wordmark uses
+about a third of its 800×600 — so sized by height they render tiny. Estimating
+the bounds from the coordinates in the `d` attributes cut the glyphs off: the
+extremes of a curve are not among its control points.
 
 ## Stack
 
@@ -93,24 +179,18 @@ the camera parked forever — the dive needs
 `beat(p, .64, .75) * (1 - beat(p, .8, .9))` to release again. That bug cost a
 cropped finale during the build.
 
-## The eight beats
+## The retired ring
 
-Ranges are 0 → 1 across the document, defined in `src/lib/story.ts`.
+Home was once ten module cards scattered in space, converging into a wired ring
+with the camera diving to each in turn. `scene/modules.tsx`, `connections.tsx`
+and `rig.tsx` were its parts and are deleted; `git log` has them.
 
-| Range | Beat | Scene |
-|---|---|---|
-| .00–.10 | Cold open | black, one panel |
-| .12–.24 | Eight islands | scatter revealed |
-| .26–.36 | The gap | camera drifts between them |
-| .38–.50 | The wiring | modules converge (.36–.54), lines draw (.44–.60) |
-| .52–.64 | One system | ring seated and lit |
-| .66–.76 | Sales, in focus | camera dives, others dim |
-| .78–.88 | One order travels | pulse runs the chain |
-| .90–1.0 | CTA | pull out, ring recedes |
-
-Convergence deliberately runs *under* the wiring beat so the "eight become one
-system" line lands on a finished image rather than describing something still
-in motion.
+Two ideas from it are worth keeping. Convergence deliberately ran *under* the
+wiring beat, so the "become one system" line landed on a finished image rather
+than describing something still in motion — the field inherits that, arriving
+at each formation before its copy is fully on screen. And the rig parked the
+focused card in the half the copy column had left empty, which is the same
+problem the ring's twelve-o'clock rule solves differently.
 
 ## Copy layer
 
@@ -136,7 +216,7 @@ saturated panels and needs a dense pool of ground to win the contrast fight.
 ## Content
 
 All copy is the real AIODYX dictionary (`src/content/en.json`), read via
-`src/lib/content.ts`. The home story now carries the actual home-page content:
+`src/lib/content.ts`. Home carries the actual home-page content:
 
 - 7 problem cards (title + description) across two beats
 - **all 10 real modules** — Finance & Accounting, CRM & Sales, Inventory &
@@ -145,10 +225,46 @@ All copy is the real AIODYX dictionary (`src/content/en.json`), read via
 - one screen per module, with its description and all 5 features
 - the AI assistant section, and 6 "why AIODYX" cards
 
-**The 3D cards carry their own copy.** Each card renders its real name, and the
-focused card also renders its description. Only the focused card's description
-is populated — an empty troika `Text` generates no glyphs, so the other nine
-cost nothing.
+The ten module hues in `story.ts` still do real work: they are the colours of
+the ten clusters, and the only thing telling one apart from another once the
+field has opened out.
+
+## Credibility markers
+
+A scroll story can be beautiful and still leave a visitor unsure whether there
+is a company behind it. Three answers to "who is this and can they actually
+build my system", added without breaking the story:
+
+- **The ten module names, on the ring.** Without them the tour is ten anonymous
+  coloured clouds — the copy column names one module at a time, so nothing on
+  screen ever says *this is an ERP and here is everything in it*. All ten stay
+  legible at once and the active one lifts, which is the one thing the DOM
+  cannot show.
+- **A marker line under the hero**: built on Odoo, with the real mark; both
+  countries; both languages. `<StoryOverlay>` grew an `intro` slot for it, the
+  mirror of the `children` slot that has always fed the closing beat.
+- **The two offices at the close**, with their real addresses and dialable
+  numbers, and the working week.
+
+Every one of these is a fact already in the dictionary. **Nothing here is
+invented** — no client logos, no headcount, no project count, no
+years-in-business, no testimonials. A marker that cannot be checked is worse
+than no marker, because the visitor who checks it stops believing the rest of
+the page too.
+
+There are no photographs anywhere on the site, of anything. That is not a
+stylistic rule so much as an honest one: there are no real photographs of this
+company to use, and generated or stock imagery of a "team" would be a claim
+about people who do not exist.
+
+### troika opacity is not material opacity
+
+The cluster labels fade with `fillOpacity` and `outlineOpacity` on the `Text`
+object, not `material.opacity`. troika's material is derived and its uniforms
+are rewritten from those properties in `onBeforeRender`, so assigning to the
+material is overwritten before it reaches the screen — all ten labels hung
+there at full strength through the opening beat. The outline is a second
+material and needs telling separately.
 
 ## Beat ranges are measured, not hardcoded
 
@@ -401,16 +517,14 @@ camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.
 
 ## Known gaps
 
-- **Mobile is unverified.** The scene is responsive in principle but has not
-  been checked on a real narrow viewport or a mid-range phone GPU. Consider
-  dropping bloom and lowering `dpr` below a width threshold.
-- **Beat 6 doesn't render module internals.** The copy says "Sales, in focus"
-  rather than "from the inside" for exactly that reason. Adding a few interior
-  rows to the focused panel would let the stronger line come back.
-- **CTAs point at `#top`** — wire them to a real destination.
+- **Mobile is unverified**, on every page. The scenes are responsive in
+  principle but have not been checked on a real narrow viewport or a mid-range
+  phone GPU; consider dropping bloom and lowering `dpr` below a width
+  threshold. Home's field is twelve thousand additive points — that is the
+  first thing to cut.
+- Home's formation count is fixed at eight in the shader by hand. An extra beat
+  with a new formation means editing the sum in the vertex shader as well as
+  the tables.
 - No favicon, OG image, or analytics.
-- The chain pulse (beat 7) travels all eight spokes, not only
-  Sales → Purchases → Inventory. Restricting it per-spoke needs a per-line
-  index attribute in the shader.
 #   A i o d y x - s e m o - 0 3  
  

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Wordmark } from "@/components/brand";
+
 const LINKS = [
   { href: "/", label: "Story" },
   { href: "/services", label: "Services" },
@@ -16,13 +18,28 @@ const LINKS = [
  * scroll is exactly the kind of motion that reads as jitter on a page whose
  * whole job is smooth travel.
  */
-export function Nav() {
+export function Nav({
+  /**
+   * The three scene pages are near-black; home is white. Only the colours
+   * differ, so this is one attribute rather than a second component — and it
+   * is a prop rather than a route check because the page that renders the bar
+   * is the thing that knows what it painted behind it.
+   */
+  theme = "dark",
+}: {
+  theme?: "dark" | "light";
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="nav" aria-label="Primary">
-      <Link href="/" className="nav__brand">
-        AIODYX
+    <nav className="nav" data-theme={theme} aria-label="Primary">
+      <Link href="/" className="nav__brand" aria-label="AIODYX — home">
+        {/* Brand navy on white; a lifted tint of the same hue on black, where
+            #13308a is all but invisible. */}
+        <Wordmark
+          className="nav__mark"
+          mark={theme === "light" ? "#13308a" : "#6E8BEA"}
+        />
       </Link>
       <ul className="nav__list">
         {LINKS.map((l) => {
