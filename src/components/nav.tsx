@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Wordmark } from "@/components/brand";
+import { useLocale } from "@/components/providers";
+import { t } from "@/lib/content";
+import { localizePath, LOCALE_NAMES, LOCALE_SHORT, LOCALES } from "@/lib/i18n";
 
 const LINKS = [
-  { href: "/", label: "Story" },
-  { href: "/services", label: "Services" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "", key: "nav.home" },
+  { href: "/services", key: "nav.services" },
+  { href: "/about", key: "nav.about" },
+  { href: "/contact", key: "nav.contact" },
 ];
 
 /**
@@ -17,48 +20,84 @@ const LINKS = [
  * No scroll-hide behaviour — chrome that appears and disappears while you
  * scroll is exactly the kind of motion that reads as jitter on a page whose
  * whole job is smooth travel.
+ *
+ * The language switch lives here rather than in a footer because it changes
+ * what the visitor is looking at *right now*, and a control whose effect is
+ * immediate has to be reachable without scrolling to the end of a story.
  */
-export function Nav({
-  /**
-   * The three scene pages are near-black; home is white. Only the colours
-   * differ, so this is one attribute rather than a second component — and it
-   * is a prop rather than a route check because the page that renders the bar
-   * is the thing that knows what it painted behind it.
-   */
-  theme = "dark",
-}: {
-  theme?: "dark" | "light";
-}) {
+export function Nav() {
   const pathname = usePathname();
+  const locale = useLocale();
 
   return (
-    <nav className="nav" data-theme={theme} aria-label="Primary">
-      <Link href="/" className="nav__brand" aria-label="AIODYX — home">
-        {/* Brand navy on white; a lifted tint of the same hue on black, where
-            #13308a is all but invisible. */}
-        <Wordmark
-          className="nav__mark"
-          mark={theme === "light" ? "#13308a" : "#6E8BEA"}
-        />
+    <nav className="nav" aria-label="Primary">
+      <Link
+        href={`/${locale}`}
+        className="nav__brand"
+        aria-label={`${t(locale, "brand.name")} — ${t(locale, "nav.home")}`}
+      >
+        {/* Brand navy, as drawn. The page is light, so the monogram gets to
+            keep the real colour rather than a lifted tint of it. */}
+        <Wordmark className="nav__mark" mark="var(--brand-mark)" />
       </Link>
+
       <ul className="nav__list">
         {LINKS.map((l) => {
-          const active =
-            l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+          const href = `/${locale}${l.href}`;
+          const active = l.href
+            ? pathname.startsWith(href)
+            : pathname === `/${locale}` || pathname === `/${locale}/`;
           return (
-            <li key={l.href}>
+            <li key={l.key}>
               <Link
-                href={l.href}
+                href={href}
                 className="nav__link"
                 data-active={active}
                 aria-current={active ? "page" : undefined}
               >
-                {l.label}
+                {t(locale, l.key)}
               </Link>
             </li>
           );
         })}
       </ul>
+
+      <div className="nav__tools">
+        <LanguageSwitch pathname={pathname} />
+      </div>
     </nav>
+  );
+}
+
+/**
+ * A link, not a button.
+ *
+ * The other language is a different URL, so this is navigation — which means
+ * it must open in a new tab, be copied, and be crawled like any other link.
+ * A button with an onClick would be none of those things.
+ */
+function LanguageSwitch({ pathname }: { pathname: string }) {
+  const locale = useLocale();
+  const other = LOCALES.find((l) => l !== locale) ?? locale;
+
+  return (
+    <Link
+      href={localizePath(pathname, other)}
+      className="nav__switch"
+      // Written in the language being offered, never in the one being left:
+      // someone who cannot read the current UI has to be able to find the way
+      // out of it.
+      lang={other}
+      hrefLang={other}
+      aria-label={`${t(locale, "ui.language_switch")}: ${LOCALE_NAMES[other]}`}
+      title={LOCALE_NAMES[other]}
+      // Remembered so the bare "/" lands them here next time rather than
+      // sending them back through language negotiation. Read by proxy.ts.
+      onClick={() => {
+        document.cookie = `aiodyx-locale=${other};path=/;max-age=31536000;samesite=lax`;
+      }}
+    >
+      {LOCALE_SHORT[other]}
+    </Link>
   );
 }

@@ -1,8 +1,8 @@
 # Eight apps, one system
 
-A four-page scroll-driven 3D site for AIODYX. Each page gets its **own** spatial
-metaphor — repeating one motion four times would read as a template, not a
-story.
+A four-page scroll-driven 3D site for AIODYX, in **English and Arabic**, on a
+paper ground. Each page gets its **own** spatial metaphor — repeating one
+motion four times would read as a template, not a story.
 
 | Page | Metaphor | Motion |
 |---|---|---|
@@ -11,8 +11,9 @@ story.
 | `/about` | A dotted globe that settles on the region | Rotation |
 | `/contact` | Amman ↔ Riyadh, an arc and a slow pulse | Almost still |
 
-Copy on every page comes from the live AIODYX dictionary (`src/content/en.json`),
-read through `src/lib/content.ts` — nothing is invented here.
+Copy on every page comes from the live AIODYX dictionary
+(`src/content/en.json`, `src/content/ar.json`), read through
+`src/lib/content.ts` — nothing is invented here.
 
 ## Why contact barely moves
 
@@ -21,7 +22,8 @@ typing, checking what they typed. Motion competing with that is decoration that
 costs comprehension. So `/contact` has no scroll choreography, bloom is switched
 off entirely, and the panels are solid rather than glass — a translucent panel
 over a moving scene is the classic legibility trap. The scene sits in the one
-region the layout leaves empty, upper-right.
+region the layout leaves empty — upper-*trailing*, which mirrors with the page
+under Arabic.
 
 That restraint is the design decision, not an omission.
 
@@ -32,6 +34,8 @@ npm run dev     # PORT=3001 npm run dev if 3000 is taken
 npm run build
 npm run lint
 ```
+
+Routes live under `/en` and `/ar`; `src/proxy.ts` redirects `/` to one of them.
 
 ## Home: one field, re-formed eight times
 
@@ -46,11 +50,11 @@ material organised.
 
 | Beat | Formation |
 |---|---|
-| open | a wide, faint haze, well behind the copy |
-| problems ×2 | seven clumps that never touch |
-| flow | the clumps drawn inward on a twist |
-| assembly | one dense shell — the point of the page |
-| modules ×10 | the shell opened out into ten seated clusters |
+| open | six ERP glyphs on a ring, copy in the hub |
+| problems ×2 | the same six glyphs, flung apart and tumbling |
+| flow | the six drawn inward on a twist, colours draining |
+| assembly | the ring — all ten modules named at once |
+| modules ×10 | a scene per module: four people, six objects |
 | ai | every cluster wired through the middle |
 | why | a lattice; six columns, because there are six reasons |
 | close | the AIODYX logotype |
@@ -59,12 +63,17 @@ That also settles the motion problem. Home cannot converge-and-orbit without
 repeating what it used to do, and it cannot climb or rotate without repeating
 services and about. Transformation in place is nobody else's.
 
-### Eight attributes, not a morph target
+### One attribute per formation, not a morph target
 
-Each point carries all eight of its positions at once (`aPos0`…`aPos7`) and the
-vertex shader sums them against eight uniform weights. A frame costs one
+Each point carries all nine of its positions at once (`aPos0`…`aPos8`) and the
+vertex shader sums them against nine uniform weights. A frame costs one
 multiply-add per formation, the CPU touches nothing but the weights, and there
 is no per-frame buffer upload and no interpolation state anywhere.
+
+The attribute list and the sum are **generated from `FORMS`**, not typed out.
+They used to be eight hand-written terms with a standing warning in this file
+to remember the shader when adding a formation; adding the ninth is what made
+generating them cheaper than heeding the warning.
 
 Which means the scene is a **pure function of scroll position**. Scrubbing
 backwards is not a reversal that has to be computed, it is the same evaluation
@@ -77,6 +86,261 @@ blended with `smooth()` between the two the scroll currently sits between. The
 accumulation is `+=` rather than `=` because consecutive beats often share a
 formation — all ten module beats rest on the ring — and the two halves have to
 add back up to one.
+
+## The opening is six ERP glyphs, not a haze
+
+The page used to open on a wide faint haze, kept faint so the headline could
+win — which it did, by saying nothing. The opening formation is now a pie
+chart, a bar chart, a trend arrow, a calculator, an envelope and a pair of
+cogs, arranged on a ring with the hero copy sitting in the hub.
+
+The ring is the load-bearing decision. It is the shape every ERP diagram is
+drawn as, but the reason it is here is that it is the only arrangement that
+fills the frame without putting anything behind the copy — a grid or a scatter
+would have to sit under it. It is an **ellipse**, 9.9 × 5.4: the copy block is
+far wider than it is tall, and a circle big enough to clear it sideways runs
+off the top of the frame. Six glyphs at 60° steps also means none of them lands
+at twelve or six o'clock, which is exactly where the headline and the trust
+line reach furthest.
+
+### Bold, or it is a coloured blob
+
+The first pass drew these the way you would draw an icon in a vector editor:
+hairline strokes, a pie with a couple of degrees of slice separation, an axis
+on the bar chart, small operator glyphs on the calculator. At ~170 screen
+pixels with 2,000 points each, every one of them collapsed. Only the envelope
+survived, because it was the only glyph that was *an outline plus one
+unmistakable feature*.
+
+Everything else is rebuilt to that rule — few elements, fat strokes, big gaps:
+
+- The pie's slice is offset far enough to leave a visible wedge of empty space.
+  At the original distance it read as a crack in a disc.
+- The bar chart lost its vertical axis, whose arm sat close enough to the first
+  bar to read as a fourth one. A baseline alone does the same job.
+- The trend arrow lost its bars entirely. With them it was the bar chart with
+  extra marks on it and the two were indistinguishable; the bare line is the
+  one shape nothing else on the ring shares.
+- The cogs went from eight fine teeth to six chunky ones. Eight fine teeth on a
+  170px circle is a fuzzy edge, which is a circle.
+
+### Point size is per-formation now
+
+`gl_PointSize` falls off as `42 / -mv.z`, and this ring sits further back than
+anything else on the page — at 20 units its points land at barely two pixels,
+which turns a drawn glyph into speckle. There is a `SIZE` table alongside
+`DISTANCE`, `HEIGHT` and `ALPHA`, blended by the same weights, so a formation
+that has to be *read* rather than felt can pay for its own legibility instead
+of dragging the camera in and breaking the composition.
+
+Each glyph takes one of the module hues, so the opening and the module tour are
+visibly the same set of colours. It is the only formation where colour arrives
+before the copy that explains it.
+
+
+### The close is a signed page, and had to be given room
+
+The finale sits *under* the tallest copy block on the site — headline,
+subtitle, two buttons, two office cards and the working week. A `min-h-screen`
+beat centres that block, which at 900px tall left exactly 161px of air above it
+and 161px below. The logotype is 133px of that lower band, so it ended up flush
+against the bottom edge with five pixels to spare and its top overlapping the
+working-week line, while 161px sat unused at the top.
+
+`<StoryPage signed>` gives the last beat some bottom padding, which pushes the
+centred block up and hands the difference to the mark — 237px of band instead
+of 161. The mark itself came up from −4.1 to −3.5 to sit in it.
+
+The rule keys off a `data-last` attribute rather than the beat id, because
+"close" is the id on three different pages and only home has a logotype
+resolving beneath it.
+
+
+## Ten module scenes, in a texture
+
+Every module beat used to be the same ring with a different cluster lit. Each
+one is now its own image — and **only four of the ten are people**. A figure is
+right for the modules that are about someone doing something (finance, sales,
+HR, support) and wrong for the ones about things: a person standing next to a
+warehouse says less about inventory than the warehouse does, and ten
+silhouettes in a row would flatten the tour into one repeated shape.
+
+| module | scene |
+|---|---|
+| Finance & Accounting | an accountant reading an Odoo report |
+| CRM & Sales | a salesperson beside a pipeline funnel |
+| Inventory & Procurement | racking, cartons, a barcode |
+| Human Resources | three people, the middle one forward |
+| Attendance & Payroll | a clock and a payslip |
+| Projects & Tasks | a kanban board, mid-sprint |
+| Manufacturing | two meshed cogs over a conveyor |
+| Customer Support | an agent on a headset, mid-conversation |
+| Business Intelligence | an Odoo dashboard |
+| AI Automation | a network with one node deciding |
+
+### Why they are not attributes
+
+Every other formation is a `vec3` attribute the vertex shader sums. Ten more
+would put the geometry at **23 vertex attributes**, and WebGL only guarantees
+16 — the page would render on the machine it was built on and fail on a good
+share of the ones it ships to.
+
+They live in a `DataTexture` instead, laid out a whole number of rows per
+module so locating a point is two cheap operations. `w` carries a palette slot
+rather than an alpha, so one fetch does position *and* colour. The scene stays
+a pure function of scroll, the upload happens once, and an eleventh module
+costs a row rather than an attribute.
+
+Two module records are fetched per vertex and cross-faded, so scrolling from
+one module to the next morphs one image into the other. Which two cannot come
+from the formation weights — all ten beats share one formation, so
+`uW[MODULE]` is their *total* and says nothing about which. The anchor table
+carries a module index alongside the beat id, and the pair is written in place
+next to the weights.
+
+### Scenes do not know which module they are
+
+They return a palette **slot**, not a colour, and slot 1 resolves to
+`uCluster[m]` in the shader — the module's own hue, the one the ring and the
+copy already use. So ten scenes share one palette, none of them names a colour,
+and re-hueing a module is a one-line change in `theme.ts`.
+
+### The ring got its job back
+
+Losing the ring would have cost the page the only moment that says *here is
+everything in it*, with all ten names legible at once. It is the `assembly`
+beat now — the overview, before the tour — which is what its copy ("every
+module is built and connected to the others") was describing all along. The
+dense core it replaced was the one formation the funnel already delivers.
+
+**Interpolate formation indices into the shader; never type them.** The module
+hues keyed off literal `uW[4] + uW[5] + uW[6]`, and renumbering the formations
+silently pointed them at the wrong three — the ring went grey while its labels
+stayed coloured, which looks like a palette decision rather than a bug.
+
+
+### The scatter is the same six glyphs, still in colour
+
+The scatter beat's copy is "Your Business Runs on Separate Tools — Not One
+System". It used to be seven anonymous gaussian clumps, which said "some stuff
+is scattered" and nothing more specific. It is now the six glyphs from the
+opening, keeping their hues, flung to their own corners of a volume and each
+rolling on its own axis — the sentence, drawn.
+
+Their colour then holds through the funnel and drains only as the field reaches
+the core, which is what makes the flow beat read as *many becoming one* rather
+than as one cloud fading into another.
+
+**This is the one formation that is not a baked attribute.** A rotation driven
+by scroll cannot be stored in a buffer, so `SCATTER` has no `aPos` of its own:
+the vertex shader rebuilds it every frame from `aLocal` — the point's place
+inside its own glyph — against `uSpin`, `uSpread` and `uShift`. `STATIC_FORMS`
+exists so that everything walking the formation list for *geometry* skips it,
+rather than uploading an attribute the shader never declares.
+
+All three uniforms are plain functions of scroll position, undamped. Damping
+would make the tumble a state machine and break the property the whole scene
+rests on: scrubbing backwards is the same evaluation at a smaller number, not a
+reversal that has to be computed.
+
+### Three things the tumble got wrong first
+
+- **Tumbling about X or Y makes a glyph vanish.** These are flat drawings, and
+  edge-on they are a line — the same trap the logotype and the figure dodge by
+  suppressing rotation outright. The axes are weighted toward Z, so a glyph
+  rolls face-on with a wobble and never disappears.
+- **The cloud sat on the copy, whichever side it picked.** Both scatter beats
+  share the formation but `<StoryOverlay>` alternates their column — `problems`
+  reads right, `problems-2` reads left. Rather than compromise, the cloud
+  *crosses the frame*: clear on one side while the first list is read, clear on
+  the other by the second. Spread over both beats it was already a third of the
+  way over too early, so the crossing is timed to the boundary between them,
+  as a fraction of their own measured span.
+- **The funnel inherited the sweep and landed on the flow copy.** Continuity
+  with where the scatter parked the glyphs was the obvious thing to want and
+  was wrong: `flow` reads right too. The glyphs have to cross back regardless,
+  so the crossing became the transition, and the funnel gathers from the empty
+  half.
+
+The scatter's placement and the funnel both mirror under Arabic, via the same
+`sideSign()` rule the module tour follows. The glyphs themselves never mirror —
+the calculator and the trend arrow would read backwards.
+
+
+### The figure is the one formation that depicts something
+
+### The ledger became an Odoo screen
+
+The figure was holding a blank report with a chart on it, which said
+"accounting" but not *whose*. The site's own hero says the system is built on
+Odoo, so the page they are reading now carries the real Odoo wordmark — the
+leading "o" in Odoo's magenta, "doo" neutral, exactly as the source file
+colours it. It is rasterised from `public/odoo-logo.svg` through the same
+`rasterize()` the AIODYX finale uses, which was pulled out of `home-scene.tsx`
+into `lib/raster.ts` so both could share it.
+
+The mark is laid out in the ledger's **own plane**, so it tilts with the page.
+A logo that stayed square to camera while the page leaned back would read as a
+sticker floating in front of the figure rather than as something printed on it.
+The chart got demoted to a strip along the bottom: with the page branded, the
+mark is the thing worth reading, and the two were competing for the same 130
+pixels.
+
+`aFig` also stopped being a 0→1 blend. Two colours covered a body and a chart;
+the mark needs a magenta and a neutral that are nowhere on that line, so it is
+a palette index into `uFigPal` now.
+
+### The idle breath was wider than the letterforms
+
+The mark still came out as a smear after all of that, and the cause was
+nothing to do with the mark. Every held formation breathes — `uTurb`, ±0.12
+world units — so that a beat you dwell on does not become a photograph. The
+strokes of the Odoo wordmark are about **0.09 units thick**. The idle animation
+was wider than the thing it was animating.
+
+There is a `TURB` table now, blended by the same weights as `DISTANCE`,
+`HEIGHT`, `ALPHA` and `SIZE`: formations made of clouds keep their full breath,
+formations made of drawing get almost none. It sharpened the icon ring and the
+closing logotype as much as it did the Odoo mark — both had been quietly paying
+the same cost.
+
+**Damp toward the scaled target, not scale after damping.** Multiplying
+`uTurb` by the blend *after* its `damp()` feeds the damp its own output, and
+the breath winds itself down to zero over a few frames.
+
+
+Every other formation is an abstraction — clumps, a shell, a ring, a lattice —
+and an abstraction reads at any density from any angle. A person does not: it
+is recognisable or it is noise, and what decides that is the silhouette.
+
+Three things followed from that, and each was a visible failure first:
+
+- **Volumes, not a cut-out.** Sampling a silhouette image is how the logotype
+  finale works and would have been far less code, but the field carries a free
+  Y-spin between beats and a flat figure turning even slightly goes edge-on and
+  collapses into a line. The spin is suppressed while this formation holds the
+  frame — the same rule the logotype already needed — and the volumes mean the
+  mid-blend state degrades to a three-quarter view instead of a smear.
+- **The chart was drawn over the face.** It began as bars standing above the
+  held ledger, which put them at head height. A figure with no head does not
+  read as a person at all. The bars live on the ledger's own face now, in its
+  plane, so they tilt with it and cannot collide with anything.
+- **A filled page is a lozenge.** Ledger and bars are the same violet, so
+  density was supposed to separate them — but 2,500 points over 138×86 screen
+  pixels is solid whatever the ratio. The page is drawn as a **rim**, which
+  costs a third of the points and states the rectangle outright, and the bars
+  get a baseline so they stand on something instead of floating.
+
+The body wears the field's own ink and only the ledger and chart take the
+module hue, through a per-point `aFig` weight. Tinting the whole figure violet
+made it a mascot; the split keeps it reading as the same twelve thousand
+records, arranged this time into a person.
+
+**The part table is normalised, not trusted.** Shares that sum to 0.96 do not
+fail loudly — they quietly dump the last 4% of the field into whichever part
+happens to be last in the table, and the bars came out a fifth heavier than the
+numbers claimed.
+
 
 ### The logotype is rasterised, not traced
 
@@ -127,14 +391,121 @@ in ~150KB rather than tens of megabytes of frames.
 **The wordmark is inlined, not an `<img>`.** The source hard-codes its fills in
 a `<style>` block, which an `<img>` tag seals off — and the mark has to sit on
 one white page and three near-black ones. Inlined, "ODYX" takes `currentColor`
-and only the "AI" monogram keeps a fixed colour. Brand navy `#13308a` is right
-on white and invisible on black, so the dark pages pass a lifted tint.
+and only the "AI" monogram keeps a fixed colour — fed `var(--brand-mark)`, so
+the mark follows the palette without the SVG being re-rendered. Now that the
+whole site is paper, that variable is the real brand navy `#13308a`; the tint
+existed because navy is invisible on black.
 
 **Crop a logo's viewBox with `getBBox()`, not by reading its path data.** Both
 files float their artwork inside a much larger canvas — Odoo's wordmark uses
 about a third of its 800×600 — so sized by height they render tiny. Estimating
 the bounds from the coordinates in the `d` attributes cut the glyphs off: the
 extremes of a curve are not among its control points.
+
+## Two languages, and what RTL actually costs
+
+Locale lives in the **path** (`/en/services`, `/ar/services`), not in state.
+That is what makes the Arabic page a real address — shareable, indexable, and
+served with its own `<title>` and `hreflang` — rather than a flag inside an
+English one. `src/proxy.ts` redirects `/` by `Accept-Language`, with a cookie
+from the switch outranking it, because someone who chose Arabic on an
+English-configured laptop meant it.
+
+**Beats had to stop being module constants.** `BEATS`, `MODULES` and the
+contact page's office list were all built from `t()` at import time, which
+froze them in whichever language loaded first. They are `buildBeats(locale)`
+now, memoised per locale — and the memo is not an optimisation:
+`<StoryOverlay>` keys its measuring effect on the beat array, so a fresh array
+each render would re-measure the page continuously and the scenes read those
+measurements.
+
+Module *geometry* stayed put. Ring positions, cluster count and ids have
+nothing to do with language, so `MODULES` still holds those and copy is looked
+up separately.
+
+### Direction is not free in world space
+
+`dir="rtl"` is on `<html>`, so flexbox, `text-align: start` and every logical
+property mirror themselves. The scenes do not: the copy column alternates
+left/right via `flex-start`/`flex-end`, and all three scene pages park their 3D
+*opposite* that column. Under Arabic "start" is the right-hand side, so every
+one of those offsets points the wrong way and the field lands on the copy it
+was placed to avoid.
+
+There is no logical coordinate system in WebGL, so the sign is applied by hand:
+`sideSign()` inside frame loops, and `isRtl(locale)` where the value is read
+during render. **Those two are not interchangeable** — `scroll.rtl` is
+published by an effect, so on the first render, which is the one that decides a
+caption's side, it is still stale.
+
+Contact was the case that only showed up in a screenshot. Its scene is pinned
+to the upper-right, "the one region the copy and the panels leave empty" — and
+under Arabic that is exactly where the headline is. Its markers mirror on X.
+
+### Arabic type is not Latin type reversed
+
+- **Inter has no Arabic glyphs at all**, so `/ar` in Inter is not unstyled, it
+  is missing. IBM Plex Sans Arabic is loaded alongside it and selected by
+  `:root:lang(ar)`.
+- **troika needs its own font file.** It parses a TTF and builds an SDF atlas,
+  so it cannot use a CSS `@font-face` the browser already has, and its default
+  face is Latin-only — every ring label, tier caption and city name came out as
+  empty boxes. `public/fonts/` holds the face; troika 0.52 supplies the bidi
+  and Arabic joining itself.
+- **All-caps tracking is destructive.** Arabic has no capitals, so
+  `text-transform: uppercase` is a no-op — but the letter-spacing that goes
+  with a Latin caps label pulls apart joins that are supposed to connect.
+  Zeroed everywhere, in CSS and in the 3D labels.
+- Negative display tracking and Latin line-heights get the same treatment;
+  Arabic runs taller and already sits tight.
+- Phone numbers are forced `dir="ltr"`. The digits reorder correctly on their
+  own, but a leading `+` is neutral and gets thrown to the far end.
+
+**The honeypot was the sharpest bug here.** `.form__trap` hid itself at
+`left: -9999px`, which under RTL is on-screen — a real person can tab into the
+field and fail the spam check by filling it in. It is `inset-inline-start` now.
+Worth knowing: a physical property declared *after* a logical one wins, so
+adding `left: auto` beside it silently put the trap back in the layout.
+
+## One ground
+
+The site is light-only. That is a constraint on the scenes rather than a colour
+choice, and it is worth being explicit about why, because the obvious change —
+repaint the CSS — would have shipped four blank pages.
+
+Every glowing thing in a dark WebGL scene is `AdditiveBlending`: it *adds* its
+colour to whatever is behind it, which is what makes a cloud of points read as
+luminous. On paper that is a no-op. White plus anything is white. So the nine
+additive materials here are normal-blended and drawn as ink, and three things
+follow from that:
+
+- **Alpha means something different.** Additive alpha is how much light a point
+  contributes, and overlapping points accumulate into brightness. Normal alpha
+  is coverage, and overlapping points just sit on each other — so the same
+  numbers that read as a luminous cloud read as flat grey. `SCENE.alpha` is
+  1.35 and `SCENE.size` is 0.88 to correct for it.
+- **Bloom is off entirely**, not turned down. It is a luminance threshold
+  effect; on a bright ground the whole frame clears the threshold, so it stops
+  picking out the glowing parts and lays milk over everything.
+- **Emphasis inverts.** Highlighting means moving *away from the ground*, which
+  here is deepening, not lifting. The focused cluster mixing toward white would
+  fade out at exactly the moment it is being talked about.
+
+The hues changed with it. The dark palette's pastels are what a light source
+looks like; as ink on paper they are barely-tinted grey. `theme.ts` carries a
+deeper set picked to hold against `#F4F5F9` — which matters because hue is the
+only thing telling one of the ten clusters from another.
+
+Two places that had to follow the ground exactly rather than approximately: the
+about globe's **occluder**, an opaque sphere at `0.97R` that stops the far-side
+dots showing through, which as a hardcoded near-black was a black ball in the
+middle of a white page; and troika's `outlineColor`, which is a knockout halo
+and only works if it is the page's own colour.
+
+`--ink` in `globals.css` and `SCENE.ground` in `theme.ts` are the same value in
+two places. They have to be — the canvas is transparent and sits over the page,
+so drift shows up as a seam.
+
 
 ## Stack
 
@@ -144,7 +515,8 @@ extremes of a curve are not among its control points.
 | `@react-three/drei` | `RoundedBox`, `Text`, `AdaptiveDpr` |
 | `@react-three/postprocessing` | bloom on the wiring |
 | `lenis` | smooth scroll |
-| `next` 16.3 / React 19 | app shell |
+| `next` 16.3 / React 19 | app shell, `[lang]` routing, `proxy.ts` |
+| `next/font` | Inter (Latin) + IBM Plex Sans Arabic |
 
 ## How the scroll drive works
 
@@ -195,13 +567,14 @@ problem the ring's twelve-o'clock rule solves differently.
 ## Copy layer
 
 DOM text, not 3D text — it's selectable, translatable and readable before (and
-without) WebGL. Visibility is toggled by `IntersectionObserver` on the middle
-third of the viewport, so a handful of events fire for the whole page instead of
-one per frame. The fade itself is a CSS transition on `opacity`/`transform`/
-`filter` only.
+without) WebGL.
 
-The `.beat__inner::before` scrim is doing real work — the copy sits over lit,
-saturated panels and needs a dense pool of ground to win the contrast fight.
+Visibility is driven from scroll position on the render loop, against cached
+section offsets, so the copy and the scene read the exact same value and cannot
+disagree. An earlier version used `IntersectionObserver`, and a second
+independent mechanism was exactly what let the two drift. Cost is one
+comparison per frame and a single attribute write when the active beat actually
+changes — no layout reads inside the loop.
 
 ## Accessibility
 
@@ -300,8 +673,12 @@ else.
 **Legibility comes from a shadow on the glyphs, not a pool behind the column.**
 The earlier approach was a radial gradient inset `-55% -70%` behind each beat.
 To win the contrast fight it had to be enormous and dense, and at that size it
-read as a black smudge drifting across the scene, swallowing the 3D cards
-behind it. A tight `text-shadow` does the same work only where it's needed.
+read as a smudge drifting across the scene, swallowing the 3D cards behind it.
+A tight `text-shadow` does the same work only where it's needed.
+
+On paper that shadow is *light*. A dark halo under dark text does not separate
+the glyphs from the particles behind them, it just smears the letterforms —
+what the copy needs is the ground pushed up, not down. `--scrim` carries it.
 
 Anything with its own box — feature pills, content cards — is filled rather
 than outlined. A transparent pill over a lit 3D card is unreadable whatever
@@ -311,8 +688,8 @@ colour the text is.
 
 `<StoryPage bold>` adds `.story--bold` to the copy layer. Services uses it.
 
-Its scene is thin bright lines on black, so the default weight left the copy
-floating and weak against the rig. Bold pushes the title to **800 / 92px**
+Its scene is a thin line drawing, so the default weight left the copy floating
+and weak against the rig. Bold pushes the title to **800 / 92px**
 with `-0.045em` tracking, the body to 500 at near-full contrast, and the pills
 to 600.
 
@@ -410,10 +787,14 @@ dimensions), so `WINDOW_PITCH` is a floor height every tower shares. That
 shared floor height is what tells you how big the cluster is.
 
 **The body has to stay nearly black.** The two accents differ a lot in
-luminance — Amman's lavender against Riyadh's teal — so any body tint bright
-enough to see washed one city into plastic while the other looked right. The
-windows carry the colour; concrete at night is close to black, and that reads
-the same whatever the accent.
+luminance, so any body tint bright enough to see washed one city into plastic
+while the other looked right. The windows carry the colour; concrete at night
+is close to black, and that reads the same whatever the accent.
+
+On the paper ground this is unchanged and still correct — the cities read as
+dark clusters standing on a bright globe, which is what a night skyline against
+a lit sky looks like. The one thing that had to flip is the beacons: a white
+warning light is invisible on paper, so they are dark points instead.
 
 **A beacon is a point, not a sphere.** At radius 0.0034 the warning lights were
 balls on sticks. Bloom is what gives a light its size on screen, so the mesh
@@ -519,12 +900,20 @@ camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.
 
 - **Mobile is unverified**, on every page. The scenes are responsive in
   principle but have not been checked on a real narrow viewport or a mid-range
-  phone GPU; consider dropping bloom and lowering `dpr` below a width
-  threshold. Home's field is twelve thousand additive points — that is the
-  first thing to cut.
-- Home's formation count is fixed at eight in the shader by hand. An extra beat
-  with a new formation means editing the sum in the vertex shader as well as
-  the tables.
-- No favicon, OG image, or analytics.
-#   A i o d y x - s e m o - 0 3  
- 
+  phone GPU; consider lowering `dpr` below a width threshold. Home's field is
+  twelve thousand points — that is the first thing to cut.
+- The ten module scenes are hand-authored geometry. Adding an eleventh module
+  means writing its scene; without one it falls back to its cluster on the
+  ring, which is plain rather than broken.
+- **The Arabic dictionary is machine-translated** and has not had a native
+  speaker's pass. It is complete and structurally correct — 796 keys, same
+  shape as English — but the register of marketing copy is exactly the thing
+  that survives translation worst. Read it before launch.
+- The contact API (`src/app/api/contact/route.ts`) is still a stub: it
+  validates, honeypots, and logs. It delivers nothing.
+- No OG image or analytics.
+- **`.story--bold` is dead CSS.** This file documents a `<StoryPage bold>`
+  variant for the services page, and the rules for it exist in `globals.css`,
+  but no page passes the prop and `StoryPage` never accepted one. Services is
+  running the default weight against a scene of thin bright lines, which is the
+  case the variant was written for. Either wire it or delete the rules.

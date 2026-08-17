@@ -22,10 +22,13 @@ import type { Beat } from "@/lib/story";
 export function StoryOverlay({
   beats,
   align = "alternate",
+  className = "",
   intro,
   children,
 }: {
   beats: Beat[];
+  /** Variant class for the copy layer as a whole. */
+  className?: string;
   /** "alternate" staggers left/right; "center" keeps every beat centred. */
   align?: "alternate" | "center";
   /** Rendered inside the opening beat — the things a visitor needs before
@@ -109,7 +112,7 @@ export function StoryOverlay({
   }, [beats]);
 
   return (
-    <div ref={root} className="relative z-10">
+    <div ref={root} className={`story relative z-10 ${className}`}>
       {beats.map((b, i) => {
         const isEdge = i === 0 || i === beats.length - 1;
         const centred = align === "center" || isEdge;
@@ -119,6 +122,9 @@ export function StoryOverlay({
             key={b.id}
             data-beat={b.id}
             data-active="false"
+            // Beat ids repeat across pages ("close" is on three of them), so
+            // anything styling the finale keys off this rather than the id.
+            data-last={i === beats.length - 1 ? "true" : undefined}
             className="beat flex min-h-screen items-center px-6 sm:px-10"
             style={{
               justifyContent: centred

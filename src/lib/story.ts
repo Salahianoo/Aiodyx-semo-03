@@ -1,14 +1,20 @@
 import { t, tList } from "@/lib/content";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 
 export type Vec3 = [number, number, number];
 
+/**
+ * A module's *identity and geometry* — everything about it that does not
+ * change with language or theme.
+ *
+ * Labels used to live here, which quietly made the whole table a function of
+ * locale: the scenes import it for ring positions and cluster count, so a
+ * translated label would have rebuilt the geometry every time the language
+ * changed. Copy is looked up separately through `moduleCopy()`, and hues come
+ * from `MODULE_HUES` in `theme.ts` for the same reason.
+ */
 export type ModuleDef = {
   id: string;
-  label: string;
-  /** Real description from the dictionary — rendered on the card itself. */
-  desc: string;
-  /** Muted hues — saturated colour reads as a toy, not a product. */
-  color: string;
   scattered: Vec3;
   assembled: Vec3;
   /** Per-module drift offset so nothing moves in lockstep. */
@@ -24,25 +30,22 @@ const RING_RADIUS = 4.75;
 
 /** The ten modules AIODYX actually builds, straight from the dictionary. */
 const KEYS = [
-  { id: "finance", color: "#A78BFA", scattered: [-7.4, 3.1, -4.2] },
-  { id: "crm", color: "#7DD3FC", scattered: [6.9, 3.6, -6.1] },
-  { id: "inventory", color: "#6EE7B7", scattered: [-5.8, -3.4, -8.0] },
-  { id: "hr", color: "#F0ABFC", scattered: [7.8, -2.3, -3.0] },
-  { id: "payroll", color: "#FCD34D", scattered: [-8.3, 0.5, -9.4] },
-  { id: "projects", color: "#93C5FD", scattered: [4.1, 5.4, -10.5] },
-  { id: "manufacturing", color: "#FDA4AF", scattered: [-3.1, -5.2, -5.3] },
-  { id: "support", color: "#C4B5FD", scattered: [8.6, 1.4, -8.8] },
-  { id: "bi", color: "#5EEAD4", scattered: [-6.2, 5.0, -7.2] },
-  { id: "ai", color: "#D8B4FE", scattered: [2.4, -5.6, -9.9] },
+  { id: "finance", scattered: [-7.4, 3.1, -4.2] },
+  { id: "crm", scattered: [6.9, 3.6, -6.1] },
+  { id: "inventory", scattered: [-5.8, -3.4, -8.0] },
+  { id: "hr", scattered: [7.8, -2.3, -3.0] },
+  { id: "payroll", scattered: [-8.3, 0.5, -9.4] },
+  { id: "projects", scattered: [4.1, 5.4, -10.5] },
+  { id: "manufacturing", scattered: [-3.1, -5.2, -5.3] },
+  { id: "support", scattered: [8.6, 1.4, -8.8] },
+  { id: "bi", scattered: [-6.2, 5.0, -7.2] },
+  { id: "ai", scattered: [2.4, -5.6, -9.9] },
 ] as const;
 
 export const MODULES: ModuleDef[] = KEYS.map((m, i) => {
   const angle = (i / KEYS.length) * Math.PI * 2 - Math.PI / 2;
   return {
     id: m.id,
-    label: t(`home.modules.${m.id}.name`),
-    desc: t(`home.modules.${m.id}.desc`),
-    color: m.color,
     scattered: m.scattered as unknown as Vec3,
     seed: i * 1.618,
     assembled: [
@@ -53,19 +56,28 @@ export const MODULES: ModuleDef[] = KEYS.map((m, i) => {
   };
 });
 
+/** A module's name and description in one language. */
+export const moduleCopy = (locale: Locale, id: string) => ({
+  label: t(locale, `home.modules.${id}.name`),
+  desc: t(locale, `home.modules.${id}.desc`),
+});
+
 /** Features for a module, used when the camera stops on it. */
-export const moduleFeatures = (id: string) =>
-  tList(`home.modules.${id}`, ["f1", "f2", "f3", "f4", "f5"]);
+export const moduleFeatures = (locale: Locale, id: string) =>
+  tList(locale, `home.modules.${id}`, ["f1", "f2", "f3", "f4", "f5"]);
 
 /**
- * Index of the first module beat in BEATS.
+ * Index of the first module beat in the beat list.
  *
  * The rig needs it to know which side the copy column is on for a given
  * module — <StoryOverlay> puts even-indexed beats on the left and odd on the
- * right — so it can park the focused card in the opposite half.
+ * right — so it can park the focused field opposite it.
+ *
+ * Beat *ids* are the same in every language, so this is computed once against
+ * the default locale rather than being made a function of one.
  */
 export const moduleBeatOffset = () =>
-  BEATS.findIndex((b) => b.id.startsWith("mod-"));
+  buildBeats(DEFAULT_LOCALE).findIndex((b) => b.id.startsWith("mod-"));
 
 /* ------------------------------------------------------------------ beats */
 
@@ -83,19 +95,9 @@ export type Beat = {
   points?: string[];
   /** Cards with a description each. */
   items?: BeatItem[];
-  /** Index into MODULES; the scene lights this card while the beat is on. */
+  /** Index into MODULES; the scene lights this cluster while the beat is on. */
   focus?: number;
 };
-
-const problem = (n: number): BeatItem => ({
-  title: t(`home.problems.p${n}.title`),
-  text: t(`home.problems.p${n}.text`),
-});
-
-const why = (n: number): BeatItem => ({
-  title: t(`home.why.feature${n}.title`),
-  text: t(`home.why.feature${n}.text`),
-});
 
 /* The module tour owns the long middle of the page: one screen per module,
    each with its real name, description and feature list. */
@@ -103,84 +105,118 @@ const TOUR_START = 0.4;
 const TOUR_END = 0.8;
 const TOUR_SPAN = (TOUR_END - TOUR_START) / MODULES.length;
 
-export const BEATS: Beat[] = [
-  {
-    id: "open",
-    from: 0,
-    to: 0.05,
-    kicker: t("home.hero.badge"),
-    title: t("home.hero.title_line1"),
-    body: t("home.hero.subtitle"),
-  },
-  {
-    id: "problems",
-    from: 0.06,
-    to: 0.13,
-    kicker: t("home.problems.eyebrow"),
-    title: t("home.problems.title"),
-    body: t("home.problems.subtitle"),
-    items: [problem(1), problem(2), problem(3)],
-  },
-  {
-    id: "problems-2",
-    from: 0.14,
-    to: 0.21,
-    kicker: t("home.problems.eyebrow"),
-    title: t("home.problems.p7.title"),
-    body: t("home.problems.bridge"),
-    items: [problem(4), problem(5), problem(6)],
-  },
-  {
-    id: "flow",
-    from: 0.22,
-    to: 0.3,
-    kicker: t("home.flow.eyebrow"),
-    title: t("home.flow.title"),
-    body: t("home.flow.subtitle"),
-  },
-  {
-    id: "assembly",
-    from: 0.31,
-    to: 0.38,
-    kicker: t("home.modules.eyebrow"),
-    title: t("home.modules.title"),
-    body: t("home.modules.subtitle"),
-  },
-  // One screen per module — the cards now carry their own copy
-  ...MODULES.map((m, i) => ({
-    id: `mod-${m.id}`,
-    from: TOUR_START + i * TOUR_SPAN,
-    to: TOUR_START + (i + 1) * TOUR_SPAN,
-    kicker: `${String(i + 1).padStart(2, "0")} / ${MODULES.length}`,
-    title: m.label,
-    body: m.desc,
-    points: moduleFeatures(m.id),
-    focus: i,
-  })),
-  {
-    id: "ai",
-    from: 0.81,
-    to: 0.87,
-    kicker: t("home.ai_section.eyebrow"),
-    title: t("home.ai_section.title"),
-    body: t("home.ai_section.subtitle"),
-    points: tList("home.ai_section", ["point1", "point2", "point4"]),
-  },
-  {
-    id: "why",
-    from: 0.88,
-    to: 0.94,
-    kicker: t("home.why.eyebrow"),
-    title: t("home.why.title"),
-    body: t("home.why.subtitle"),
-    items: [why(1), why(2), why(3), why(4), why(5), why(6)],
-  },
-  {
-    id: "close",
-    from: 0.95,
-    to: 1,
-    kicker: t("brand.name"),
-    title: t("home.cta.title"),
-    body: t("home.cta.subtitle"),
-  },
-];
+/**
+ * Built per locale and cached.
+ *
+ * The cache is not an optimisation — <StoryOverlay> keys its measuring effect
+ * on the beat array, so handing it a freshly built list on every render would
+ * tear down and re-measure the whole page continuously, and the scenes read
+ * those measurements. Same locale must mean the same array identity.
+ */
+const CACHE = new Map<Locale, Beat[]>();
+
+export function buildBeats(locale: Locale): Beat[] {
+  const cached = CACHE.get(locale);
+  if (cached) return cached;
+
+  const problem = (n: number): BeatItem => ({
+    title: t(locale, `home.problems.p${n}.title`),
+    text: t(locale, `home.problems.p${n}.text`),
+  });
+
+  const why = (n: number): BeatItem => ({
+    title: t(locale, `home.why.feature${n}.title`),
+    text: t(locale, `home.why.feature${n}.text`),
+  });
+
+  const beats: Beat[] = [
+    {
+      id: "open",
+      from: 0,
+      to: 0.05,
+      kicker: t(locale, "home.hero.badge"),
+      title: t(locale, "home.hero.title_line1"),
+      body: t(locale, "home.hero.subtitle"),
+    },
+    {
+      id: "problems",
+      from: 0.06,
+      to: 0.13,
+      kicker: t(locale, "home.problems.eyebrow"),
+      title: t(locale, "home.problems.title"),
+      body: t(locale, "home.problems.subtitle"),
+      items: [problem(1), problem(2), problem(3)],
+    },
+    {
+      id: "problems-2",
+      from: 0.14,
+      to: 0.21,
+      kicker: t(locale, "home.problems.eyebrow"),
+      title: t(locale, "home.problems.p7.title"),
+      body: t(locale, "home.problems.bridge"),
+      items: [problem(4), problem(5), problem(6)],
+    },
+    {
+      id: "flow",
+      from: 0.22,
+      to: 0.3,
+      kicker: t(locale, "home.flow.eyebrow"),
+      title: t(locale, "home.flow.title"),
+      body: t(locale, "home.flow.subtitle"),
+    },
+    {
+      id: "assembly",
+      from: 0.31,
+      to: 0.38,
+      kicker: t(locale, "home.modules.eyebrow"),
+      title: t(locale, "home.modules.title"),
+      body: t(locale, "home.modules.subtitle"),
+    },
+    // One screen per module — the cards carry their own copy
+    ...MODULES.map((m, i) => {
+      const { label, desc } = moduleCopy(locale, m.id);
+      return {
+        id: `mod-${m.id}`,
+        from: TOUR_START + i * TOUR_SPAN,
+        to: TOUR_START + (i + 1) * TOUR_SPAN,
+        // Latin digits in both languages: these are an index into a tour, and
+        // Arabic-Indic numerals here would read as a different counter from
+        // the "01 / 10" the eye is tracking down the page.
+        kicker: `${String(i + 1).padStart(2, "0")} / ${MODULES.length}`,
+        title: label,
+        body: desc,
+        points: moduleFeatures(locale, m.id),
+        focus: i,
+      };
+    }),
+    {
+      id: "ai",
+      from: 0.81,
+      to: 0.87,
+      kicker: t(locale, "home.ai_section.eyebrow"),
+      title: t(locale, "home.ai_section.title"),
+      body: t(locale, "home.ai_section.subtitle"),
+      points: tList(locale, "home.ai_section", ["point1", "point2", "point4"]),
+    },
+    {
+      id: "why",
+      from: 0.88,
+      to: 0.94,
+      kicker: t(locale, "home.why.eyebrow"),
+      title: t(locale, "home.why.title"),
+      body: t(locale, "home.why.subtitle"),
+      items: [why(1), why(2), why(3), why(4), why(5), why(6)],
+    },
+    {
+      id: "close",
+      from: 0.95,
+      to: 1,
+      kicker: t(locale, "brand.name"),
+      title: t(locale, "home.cta.title"),
+      body: t(locale, "home.cta.subtitle"),
+    },
+  ];
+
+  CACHE.set(locale, beats);
+  return beats;
+}

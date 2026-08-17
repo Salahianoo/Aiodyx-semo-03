@@ -29,7 +29,9 @@
 }
 
 .trust__odoo img {
-  /* The mark carries its own colour and reads as itself on black. */
+  /* Odoo's own violet. It is a mid-tone, so it holds on both grounds and is
+     left alone in either theme — recolouring another company's mark to suit
+     your page is not a thing you get to do. */
   height: 19px;
   width: auto;
 }
@@ -61,11 +63,12 @@
 .offices__card {
   flex: 1 1 15rem;
   padding: 0.8rem 1rem;
-  border: 1px solid color-mix(in oklab, var(--paper) 12%, transparent);
+  border: 1px solid var(--line);
   border-radius: 12px;
   /* Solid, not glass: a translucent panel over a moving scene is the
-     legibility trap this codebase keeps re-learning. */
-  background: #0a0a12;
+     legibility trap this codebase keeps re-learning. Was hardcoded #0a0a12,
+     which is a black card on the light theme's white page. */
+  background: var(--surface);
 }
 
 .offices__country {

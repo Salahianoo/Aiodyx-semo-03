@@ -5,8 +5,13 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 
-import { VALUES, FACET_COLORS } from "@/lib/about-story";
+import type { SceneEnv } from "@/components/story-page";
+import { VALUES } from "@/lib/about-story";
+import { t } from "@/lib/content";
+import { arabicFontUrl, displayCase } from "@/lib/fonts";
+import { isRtl, type Locale } from "@/lib/i18n";
 import { beat, damp, owns, rangeOf, scroll } from "@/lib/scroll";
+import { CITY_COLORS, FACET_COLORS, PEAK, SCENE } from "@/lib/theme";
 import { Starfield } from "./starfield";
 
 /**
@@ -137,14 +142,25 @@ const ROUTE = (() => {
   return g;
 })();
 
-const ROUTE_UNIFORMS = { uPulse: { value: 0 }, uShow: { value: 0 } };
+const ROUTE_UNIFORMS = {
+  uPulse: { value: 0 },
+  uShow: { value: 0 },
+  uColor: { value: new THREE.Color(CITY_COLORS.amman) },
+  /**
+   * What the pulse travels *toward*. Away from the ground, which here means
+   * deepening — a pulse travelling toward white on a white page disappears
+   * exactly at its peak.
+   */
+  uPeak: { value: new THREE.Color(PEAK) },
+};
 
 const ROUTE_LINE = (() => {
   const m = new THREE.ShaderMaterial({
     uniforms: ROUTE_UNIFORMS,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    // Additive adds its colour to the paper behind it, which is a no-op.
+    blending: THREE.NormalBlending,
     vertexShader: /* glsl */ `
       attribute float aDist;
       varying float vDist;
@@ -156,12 +172,14 @@ const ROUTE_LINE = (() => {
     fragmentShader: /* glsl */ `
       uniform float uPulse;
       uniform float uShow;
+      uniform vec3 uColor;
+      uniform vec3 uPeak;
       varying float vDist;
       void main() {
         float pulse = smoothstep(0.14, 0.0, abs(vDist - uPulse));
         float alpha = (0.22 + pulse * 0.78) * uShow;
         if (alpha < 0.002) discard;
-        gl_FragColor = vec4(mix(vec3(0.65,0.55,0.98), vec3(1.0), pulse * 0.7), alpha);
+        gl_FragColor = vec4(mix(uColor, uPeak, pulse * 0.7), alpha);
       }
     `,
   });
@@ -429,11 +447,13 @@ function beacon(accent: string) {
   let m = BEACONS.get(accent);
   if (!m) {
     m = new THREE.MeshBasicMaterial({
-      color: "#FFFFFF",
+      // A white beacon is invisible against paper. Dark instead — which is
+      // what a warning light actually looks like against a bright sky.
+      color: "#2a2d3d",
       transparent: true,
       opacity: 0,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
     BEACONS.set(accent, m);
   }
@@ -460,7 +480,7 @@ function ground(accent: string) {
       },
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       vertexShader: /* glsl */ `
         varying vec2 vUv;
         void main() {
@@ -639,7 +659,12 @@ function ValueSatellites({ reduced }: { reduced: boolean }) {
   return (
     <group ref={orbit}>
       <lineSegments geometry={ORBIT} frustumCulled={false}>
-        <lineBasicMaterial ref={orbitMat} color="#A78BFA" transparent opacity={0} />
+        <lineBasicMaterial
+          ref={orbitMat}
+          color={FACET_COLORS[0]}
+          transparent
+          opacity={0}
+        />
       </lineSegments>
 
       {VALUES.map((id, i) => {
@@ -740,6 +765,7 @@ function Marker({
   matRef,
   groupRef,
   side,
+  locale,
 }: {
   at: THREE.Vector3;
   label: string;
@@ -748,6 +774,7 @@ function Marker({
   groupRef: React.RefObject<THREE.Group | null>;
   /** +1 places the callout on the camera's right, -1 on its left. */
   side: 1 | -1;
+  locale: Locale;
 }) {
   const upLocal = useMemo(() => at.clone().normalize(), [at]);
   const nodeAt = useMemo(
@@ -852,11 +879,12 @@ function Marker({
             color={color}
             anchorX={side > 0 ? "left" : "right"}
             anchorY="middle"
-            letterSpacing={0.12}
+            font={arabicFontUrl(locale)}
+            letterSpacing={locale === "ar" ? 0 : 0.12}
             outlineWidth={0.011}
-            outlineColor="#05050a"
+            outlineColor={SCENE.outline}
           >
-            {label.toUpperCase()}
+            {displayCase(label, locale)}
           </Text>
         </Billboard>
       </group>
@@ -868,7 +896,9 @@ function Globe({
   reduced,
   ammanCity,
   riyadhCity,
+  locale,
 }: {
+  locale: Locale;
   reduced: boolean;
   ammanCity: React.RefObject<THREE.Group | null>;
   riyadhCity: React.RefObject<THREE.Group | null>;
@@ -884,6 +914,10 @@ function Globe({
 
   const accent = useMemo(() => new THREE.Color(), []);
   const target = useMemo(() => new THREE.Color(), []);
+
+  // From the locale, not `scroll.rtl` — that flag is published by an effect
+  // and is still stale on the render where these sides are decided.
+  const rtl = isRtl(locale);
 
   const ammanPos = useMemo(() => latLon(AMMAN.lat, AMMAN.lon), []);
   const riyadhPos = useMemo(() => latLon(RIYADH.lat, RIYADH.lon), []);
@@ -1045,7 +1079,6 @@ function Globe({
           ref={glow}
           transparent
           opacity={0}
-          blending={THREE.AdditiveBlending}
           depthWrite={false}
           side={THREE.BackSide}
         />
@@ -1055,13 +1088,17 @@ function Globe({
           dots showing through and flattening the globe into a disc. */}
       <mesh>
         <sphereGeometry args={[R * 0.97, 48, 48]} />
-        <meshBasicMaterial color="#05050a" />
+        {/* Has to be the page's ground exactly. It is the far side of the
+            globe being hidden, so anything else reads as a solid ball behind
+            the dots — on the light theme a hardcoded near-black was a black
+            disc sitting in the middle of a white page. */}
+        <meshBasicMaterial color={SCENE.ground} />
       </mesh>
 
       <primitive object={ROUTE_LINE} />
 
-      <Skyline at={ammanPos} color="#A78BFA" groupRef={ammanCity} />
-      <Skyline at={riyadhPos} color="#6FCBE2" groupRef={riyadhCity} />
+      <Skyline at={ammanPos} color={CITY_COLORS.amman} groupRef={ammanCity} />
+      <Skyline at={riyadhPos} color={CITY_COLORS.riyadh} groupRef={riyadhCity} />
 
       {/* Each callout stands opposite its own copy column. <StoryOverlay>
           alternates the text by beat index — amman is odd so its copy sits
@@ -1069,19 +1106,23 @@ function Globe({
           same side lands straight on the headline. */}
       <Marker
         at={ammanPos}
-        label={AMMAN.label}
-        color="#A78BFA"
+        label={t(locale, "about.locations.jordan.city")}
+        color={CITY_COLORS.amman}
         matRef={ammanMat}
         groupRef={ammanMarker}
-        side={-1}
+        // Mirrored under Arabic, where `flex-start` is the right-hand side and
+        // the copy column each callout is standing opposite has swapped.
+        side={rtl ? 1 : -1}
+        locale={locale}
       />
       <Marker
         at={riyadhPos}
-        label={RIYADH.label}
-        color="#6FCBE2"
+        label={t(locale, "about.locations.saudi.city")}
+        color={CITY_COLORS.riyadh}
         matRef={riyadhMat}
         groupRef={riyadhMarker}
-        side={1}
+        side={rtl ? -1 : 1}
+        locale={locale}
       />
     </group>
   );
@@ -1194,7 +1235,7 @@ function OrbitRig({
   return null;
 }
 
-export function AboutScene({ reduced }: { reduced: boolean }) {
+export function AboutScene({ reduced, locale }: SceneEnv) {
   // Held here so the rig can read each city's world position — they live
   // inside the rotating globe, so only the object knows where it actually is.
   const ammanCity = useRef<THREE.Group>(null);
@@ -1202,11 +1243,18 @@ export function AboutScene({ reduced }: { reduced: boolean }) {
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <pointLight position={[3, 2, 4]} intensity={2} color="#8B5CF6" />
+      {/* Paper reflects, so the fill sits high and the key stays modest —
+          a stronger key blows the tower roofs out. */}
+      <ambientLight intensity={0.8} />
+      <pointLight position={[3, 2, 4]} intensity={1.1} color={FACET_COLORS[4]} />
 
       <Starfield reduced={reduced} />
-      <Globe reduced={reduced} ammanCity={ammanCity} riyadhCity={riyadhCity} />
+      <Globe
+        reduced={reduced}
+        ammanCity={ammanCity}
+        riyadhCity={riyadhCity}
+        locale={locale}
+      />
       {/* Outside <Globe> so the orbit doesn't inherit the planet's spin */}
       <ValueSatellites reduced={reduced} />
       <OrbitRig

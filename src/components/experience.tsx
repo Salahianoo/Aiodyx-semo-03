@@ -4,10 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import "@/app/trust.css";
+import { useLocale } from "@/components/providers";
 import { StoryPage } from "@/components/story-page";
 import { HomeScene } from "@/components/scene/home-scene";
-import { BEATS } from "@/lib/story";
+import { buildBeats } from "@/lib/story";
 import { t } from "@/lib/content";
+import type { Locale } from "@/lib/i18n";
 
 /**
  * Credibility markers, and the rule they follow.
@@ -26,11 +28,11 @@ import { t } from "@/lib/content";
 
 const OFFICES = ["jordan", "saudi"] as const;
 
-function Intro() {
+function Intro({ locale }: { locale: Locale }) {
   return (
     <div className="trust">
       <span className="trust__odoo">
-        <span>Built on</span>
+        <span>{t(locale, "trust.built_on", "Built on")}</span>
         <Image
           src="/odoo-logo.svg"
           alt="Odoo"
@@ -42,48 +44,62 @@ function Intro() {
       </span>
       <span className="trust__sep" aria-hidden="true" />
       <span className="trust__fact">
-        {t("about.locations.jordan.country")} · {t("about.locations.saudi.country")}
+        {t(locale, "about.locations.jordan.country")} ·{" "}
+        {t(locale, "about.locations.saudi.country")}
       </span>
       <span className="trust__sep" aria-hidden="true" />
-      <span className="trust__fact">{t("home.why.feature5.title")}</span>
+      <span className="trust__fact">{t(locale, "home.why.feature5.title")}</span>
     </div>
   );
 }
 
-function Offices() {
+function Offices({ locale }: { locale: Locale }) {
   return (
     <div className="offices">
       {OFFICES.map((o) => (
         <div key={o} className="offices__card">
-          <p className="offices__country">{t(`about.locations.${o}.country`)}</p>
-          <p className="offices__line">{t(`about.locations.${o}.address`)}</p>
-          <a className="offices__line offices__tel" href={`tel:${t(`about.locations.${o}.phone`).replace(/\s/g, "")}`}>
-            {t(`about.locations.${o}.phone`)}
+          <p className="offices__country">
+            {t(locale, `about.locations.${o}.country`)}
+          </p>
+          <p className="offices__line">
+            {t(locale, `about.locations.${o}.address`)}
+          </p>
+          <a
+            className="offices__line offices__tel"
+            // The number itself always stays Latin-digit and LTR: `tel:` is a
+            // protocol, not prose, and the dialler gets the raw string.
+            href={`tel:${t(locale, `about.locations.${o}.phone`).replace(/\s/g, "")}`}
+            dir="ltr"
+          >
+            {t(locale, `about.locations.${o}.phone`)}
           </a>
         </div>
       ))}
-      <p className="offices__hours">{t("about.locations.hours")}</p>
+      <p className="offices__hours">{t(locale, "about.locations.hours")}</p>
     </div>
   );
 }
 
 export function Experience() {
+  const locale = useLocale();
+
   return (
     <StoryPage
-      beats={BEATS}
-      scene={(reduced) => <HomeScene reduced={reduced} />}
+      beats={buildBeats(locale)}
+      scene={(env) => <HomeScene {...env} />}
       showHint
-      intro={<Intro />}
+      signed
+      intro={<Intro locale={locale} />}
     >
       <div className="beat__actions">
-        <Link className="btn btn--primary" href="/contact">
-          {t("home.cta.button")}
+        <Link className="btn btn--primary" href={`/${locale}/contact`}>
+          {t(locale, "home.cta.button")}
         </Link>
-        <Link className="btn btn--ghost" href="/services">
-          {t("home.flow.cta_more")}
+        <Link className="btn btn--ghost" href={`/${locale}/services`}>
+          {t(locale, "home.flow.cta_more")}
         </Link>
       </div>
-      <Offices />
+      <Offices locale={locale} />
     </StoryPage>
   );
 }

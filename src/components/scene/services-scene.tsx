@@ -5,9 +5,13 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 
-import { STAGES, STATION_COLORS, TIER_GAP, TOP_Y, tierY } from "@/lib/services-story";
+import type { SceneEnv } from "@/components/story-page";
+import { STAGES, TIER_GAP, TOP_Y, tierY } from "@/lib/services-story";
 import { t } from "@/lib/content";
+import { arabicFontUrl, displayCase } from "@/lib/fonts";
+import { isRtl, type Locale } from "@/lib/i18n";
 import { beat, clamp, damp, rangeOf, scroll } from "@/lib/scroll";
+import { SCENE, STATION_COLORS } from "@/lib/theme";
 
 /**
  * A system building itself, one stage per tier, with the camera climbing it.
@@ -164,9 +168,12 @@ function moduleMat(i: number) {
   if (!m) {
     const c = new THREE.Color(STATION_COLORS[i]);
     m = new THREE.MeshStandardMaterial({
-      color: c.clone().multiplyScalar(0.42),
+      // Near its own hue rather than a fifth of it: on paper a body at 0.42 of
+      // an already-deep colour is nearly black, and the modules read as holes
+      // punched in the tier instead of the solid thing the drawing becomes.
+      color: c.clone().multiplyScalar(0.94),
       emissive: c,
-      emissiveIntensity: 0.22,
+      emissiveIntensity: SCENE.emissive,
       roughness: 0.45,
       metalness: 0.3,
       transparent: true,
@@ -177,7 +184,12 @@ function moduleMat(i: number) {
   return m;
 }
 
-/** The completion flash. Additive so it reads as light, not as a grey hoop. */
+/**
+ * The completion flash.
+ *
+ * Not additive, however much it wants to be: additive adds its colour to the
+ * paper behind it, which produces nothing at all.
+ */
 function sweepMat(i: number) {
   let m = SWEEPS.get(i);
   if (!m) {
@@ -186,7 +198,7 @@ function sweepMat(i: number) {
       transparent: true,
       opacity: 0,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     });
     SWEEPS.set(i, m);
   }
@@ -205,6 +217,15 @@ const RIG_UNIFORMS = {
   /** World height the build has reached: the spine is live below, inert above. */
   uBuilt: { value: 0 },
   uColor: { value: new THREE.Color(STATION_COLORS[0]) },
+  /**
+   * The colour of spine that has not been built yet.
+   *
+   * Was a literal near-black in the fragment shader, which reads as "barely
+   * there" only against a near-black page. On paper it has to be a pale grey,
+   * or the unbuilt section is the single darkest thing in frame — a solid bar
+   * running up the middle of the copy column.
+   */
+  uInert: { value: new THREE.Color("#c9ccdb") },
 };
 
 const SPINE_MATERIAL = new THREE.ShaderMaterial({
@@ -226,6 +247,7 @@ const SPINE_MATERIAL = new THREE.ShaderMaterial({
   `,
   fragmentShader: /* glsl */ `
     uniform vec3 uColor;
+    uniform vec3 uInert;
     uniform float uTime;
     uniform float uShow;
     uniform float uBuilt;
@@ -237,7 +259,7 @@ const SPINE_MATERIAL = new THREE.ShaderMaterial({
       // Live below the frontier, inert above it — the spine grows with the build
       float live = smoothstep(uBuilt + 0.25, uBuilt - 0.25, vY);
 
-      vec3 col = mix(vec3(0.055, 0.055, 0.085), uColor * 0.5, live);
+      vec3 col = mix(uInert, uColor * 0.5, live);
 
       // Data running up the finished section
       float ph = fract(vY * 0.16 - uTime * 0.19);
@@ -309,7 +331,10 @@ const GROUND_MATERIAL = new THREE.ShaderMaterial({
 
 /* ------------------------------------------------------------------ tiers */
 
-function Tier({ index }: { index: number }) {
+function Tier({ index, locale }: { index: number; locale: Locale }) {
+  // From the locale, not `scroll.rtl`: that flag is published by an effect, so
+  // on the first render — the one that decides this side — it is still stale.
+  const flip = isRtl(locale) ? -1 : 1;
   const color = STATION_COLORS[index];
   const y = tierY(index);
   const mods = useRef<(THREE.Group | null)[]>([]);
@@ -321,7 +346,9 @@ function Tier({ index }: { index: number }) {
    * the text by beat index, and tier `i` is beat `i + 1`, so odd beats put
    * their copy right and even ones left.
    */
-  const side = index % 2 === 0 ? -1 : 1;
+  // Mirrored under Arabic: `flex-start` is the right-hand side there, so the
+  // whole alternation flips and every caption would land on its own copy.
+  const side = (index % 2 === 0 ? -1 : 1) * flip;
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
@@ -414,9 +441,11 @@ function Tier({ index }: { index: number }) {
 
       <group ref={caption} scale={0.001}>
         <Billboard>
+          {/* The big ghost numeral. It is meant to sit just above the ground
+              — which means it has to move with the ground, not stay slate. */}
           <Text
             fontSize={0.66}
-            color="#2E2E44"
+            color={SCENE.muted}
             anchorX="center"
             anchorY="middle"
             letterSpacing={0.02}
@@ -429,11 +458,14 @@ function Tier({ index }: { index: number }) {
             color={color}
             anchorX="center"
             anchorY="middle"
-            letterSpacing={0.16}
+            font={arabicFontUrl(locale)}
+            // 0.16 is wide even for Latin caps; for Arabic it would pull the
+            // cursive joins apart entirely.
+            letterSpacing={locale === "ar" ? 0 : 0.16}
             outlineWidth={0.008}
-            outlineColor="#05050a"
+            outlineColor={SCENE.outline}
           >
-            {t(`home.process.${STAGES[index]}.title`).toUpperCase()}
+            {displayCase(t(locale, `home.process.${STAGES[index]}.title`), locale)}
           </Text>
         </Billboard>
       </group>
@@ -485,7 +517,12 @@ function Scaffold({ reduced }: { reduced: boolean }) {
   return (
     <>
       <lineSegments geometry={BLUEPRINT} frustumCulled={false}>
-        <lineBasicMaterial ref={blueprint} color="#8B7FD4" transparent opacity={0} />
+        <lineBasicMaterial
+          ref={blueprint}
+          color={SCENE.draft}
+          transparent
+          opacity={0}
+        />
       </lineSegments>
 
       <mesh geometry={SPINE_GEO} material={SPINE_MATERIAL} position={[0, SPINE_BASE, 0]} />
@@ -556,17 +593,19 @@ function BuildRig({ reduced }: { reduced: boolean }) {
   return null;
 }
 
-export function ServicesScene({ reduced }: { reduced: boolean }) {
+export function ServicesScene({ reduced, locale }: SceneEnv) {
   return (
     <>
       {/* The modules are the only lit thing here; everything else is emissive.
-          A key from above-right is what gives their faces different values. */}
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[5, 9, 6]} intensity={2.1} />
+          A key from above-right is what gives their faces different values —
+          but paper reflects, so the fill sits high and the key stays modest
+          rather than blowing the tops out. */}
+      <ambientLight intensity={0.95} />
+      <directionalLight position={[5, 9, 6]} intensity={1.2} />
 
       <Scaffold reduced={reduced} />
       {STAGES.map((_, i) => (
-        <Tier key={i} index={i} />
+        <Tier key={i} index={i} locale={locale} />
       ))}
 
       <BuildRig reduced={reduced} />

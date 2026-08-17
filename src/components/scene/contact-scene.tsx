@@ -5,7 +5,12 @@ import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 
+import type { SceneEnv } from "@/components/story-page";
+import { t } from "@/lib/content";
+import { arabicFontUrl, displayCase } from "@/lib/fonts";
+import { isRtl, type Locale } from "@/lib/i18n";
 import { damp, scroll } from "@/lib/scroll";
+import { ACCENT, CITY_COLORS, PEAK, SCENE } from "@/lib/theme";
 import { Starfield } from "./starfield";
 
 /**
@@ -19,12 +24,20 @@ import { Starfield } from "./starfield";
  */
 
 /**
- * Placed in the upper-right of the frame, which is the one region the copy and
- * the panels leave empty. Centred, the markers sat directly behind the opaque
- * form panel and were invisible.
+ * Placed in the upper-*trailing* corner of the frame, which is the one region
+ * the copy and the panels leave empty. Centred, the markers sat directly
+ * behind the opaque form panel and were invisible.
+ *
+ * "Trailing" and not "right": under Arabic the whole page mirrors, so the
+ * upper right is where the headline now is — these coordinates have to mirror
+ * with it or the scene lands on top of the copy it was placed to avoid.
  */
 const AMMAN = new THREE.Vector3(1.5, 1.05, -0.9);
 const RIYADH = new THREE.Vector3(3.4, 0.05, -1.5);
+
+/** The same point, mirrored across the vertical axis when the page is RTL. */
+const mirrored = (v: THREE.Vector3, rtl: boolean) =>
+  rtl ? new THREE.Vector3(-v.x, v.y, v.z) : v;
 
 const ARC_VERTEX = /* glsl */ `
   attribute float aDist;
@@ -37,11 +50,15 @@ const ARC_VERTEX = /* glsl */ `
 
 const ARC_FRAGMENT = /* glsl */ `
   uniform float uPulse;
+  uniform vec3 uColor;
+  /** What the pulse brightens *toward*: white on black, ink on paper. */
+  uniform vec3 uPeak;
+  uniform float uAlpha;
   varying float vDist;
   void main() {
     float pulse = smoothstep(0.11, 0.0, abs(vDist - uPulse));
-    float alpha = 0.13 + pulse * 0.7;
-    gl_FragColor = vec4(mix(vec3(0.55, 0.44, 0.92), vec3(1.0), pulse * 0.6), alpha);
+    float alpha = (0.13 + pulse * 0.7) * uAlpha;
+    gl_FragColor = vec4(mix(uColor, uPeak, pulse * 0.6), alpha);
   }
 `;
 
@@ -55,7 +72,16 @@ const ARC_FRAGMENT = /* glsl */ `
  * outside the component keeps both the geometry and its mutable uniforms clear
  * of the compiler's render-purity and ref rules.
  */
-const ARC_UNIFORMS = { uPulse: { value: 0 } };
+const ARC_UNIFORMS = {
+  uPulse: { value: 0 },
+  uColor: { value: new THREE.Color(CITY_COLORS.amman) },
+  uPeak: { value: new THREE.Color(PEAK) },
+  /**
+   * The line was tuned as an additive glow. Read as coverage instead, the same
+   * alphas produce a washed-out grey thread, so it leans on this.
+   */
+  uAlpha: { value: 1.5 },
+};
 
 const ARC_LINE = (() => {
   // A gentle bow between the two offices, lifted on Y
@@ -82,7 +108,8 @@ const ARC_LINE = (() => {
     uniforms: ARC_UNIFORMS,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    // Additive would add its colour to the paper behind it, which is nothing.
+    blending: THREE.NormalBlending,
   });
 
   const line = new THREE.Line(g, m);
@@ -90,23 +117,32 @@ const ARC_LINE = (() => {
   return line;
 })();
 
-function Arc() {
+function Arc({ rtl }: { rtl: boolean }) {
   useFrame((state) => {
     // Slow enough to read as a signal travelling, not a loading bar
     ARC_UNIFORMS.uPulse.value = (state.clock.elapsedTime * 0.16) % 1.35;
   });
 
-  return <primitive object={ARC_LINE} />;
+  // The arc is one static line with no text on it, so mirroring the whole
+  // object is safe here in a way it would not be for the markers — their
+  // labels would come out backwards.
+  return (
+    <group scale={[rtl ? -1 : 1, 1, 1]}>
+      <primitive object={ARC_LINE} />
+    </group>
+  );
 }
 
 function Marker({
   at,
   label,
   color,
+  locale,
 }: {
   at: THREE.Vector3;
   label: string;
   color: string;
+  locale: Locale;
 }) {
   const halo = useRef<THREE.Mesh>(null);
 
@@ -128,22 +164,24 @@ function Marker({
       </mesh>
       <mesh ref={halo}>
         <sphereGeometry args={[0.17, 20, 20]} />
+        {/* A normal-blended wash rather than an additive glow, which needs
+            more alpha to register the same softness. */}
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={0.16}
-          blending={THREE.AdditiveBlending}
+          opacity={0.24}
           depthWrite={false}
         />
       </mesh>
       <Text
         position={[0, 0.36, 0]}
         fontSize={0.15}
-        color="#8E8EA0"
+        color={SCENE.muted}
         anchorX="center"
-        letterSpacing={0.1}
+        font={arabicFontUrl(locale)}
+        letterSpacing={locale === "ar" ? 0 : 0.1}
       >
-        {label.toUpperCase()}
+        {displayCase(label, locale)}
       </Text>
     </group>
   );
@@ -180,16 +218,31 @@ function CalmRig({ reduced }: { reduced: boolean }) {
   return null;
 }
 
-export function ContactScene({ reduced }: { reduced: boolean }) {
+export function ContactScene({ reduced, locale }: SceneEnv) {
+  // Derived from the locale rather than read from `scroll.rtl`, which is
+  // published by an effect and is therefore still stale on first render — the
+  // one render where these positions are decided.
+  const rtl = isRtl(locale);
+
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[0, 1, 3]} intensity={1.6} color="#8B5CF6" />
+      <ambientLight intensity={0.85} />
+      <pointLight position={[0, 1, 3]} intensity={0.9} color={ACCENT} />
 
       <Starfield reduced={reduced} />
-      <Arc />
-      <Marker at={AMMAN} label="Amman" color="#A78BFA" />
-      <Marker at={RIYADH} label="Riyadh" color="#6FCBE2" />
+      <Arc rtl={rtl} />
+      <Marker
+        at={mirrored(AMMAN, rtl)}
+        label={t(locale, "about.locations.jordan.city")}
+        color={CITY_COLORS.amman}
+        locale={locale}
+      />
+      <Marker
+        at={mirrored(RIYADH, rtl)}
+        label={t(locale, "about.locations.saudi.city")}
+        color={CITY_COLORS.riyadh}
+        locale={locale}
+      />
       <CalmRig reduced={reduced} />
     </>
   );

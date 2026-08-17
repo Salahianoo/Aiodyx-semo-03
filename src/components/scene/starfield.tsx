@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import { damp, scroll } from "@/lib/scroll";
+import { SCENE } from "@/lib/theme";
 
 const COUNT = 900;
 
@@ -68,10 +69,12 @@ export function Starfield({ reduced }: { reduced: boolean }) {
 
   return (
     <points ref={points} geometry={geometry} frustumCulled={false}>
+      {/* A parallax reference, so it stays near the ground rather than
+          contrasting with it — slate on paper. */}
       <pointsMaterial
         ref={mat}
         size={0.035}
-        color="#B9B4D6"
+        color={SCENE.dust}
         transparent
         opacity={0}
         sizeAttenuation

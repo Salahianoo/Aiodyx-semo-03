@@ -34,7 +34,24 @@ export const scroll = {
    * would believe it was the focused one at once.
    */
   measured: false,
+  /**
+   * Whether the copy layer is running right-to-left.
+   *
+   * Lives here, next to the scroll state, because it is consumed the same way:
+   * inside `useFrame`, by scenes that have no business subscribing to React
+   * context on the render loop.
+   *
+   * The scenes park the 3D opposite the copy column, and <StoryOverlay> places
+   * that column with `flex-start`/`flex-end` — which are *logical*, so under
+   * Arabic "start" is the right-hand side of the screen and every one of those
+   * offsets points the wrong way. World space has no such thing as logical, so
+   * the sign has to be applied by hand: multiply by `sideSign()`.
+   */
+  rtl: false,
 };
+
+/** +1 while the copy reads left-to-right, −1 when it reads right-to-left. */
+export const sideSign = () => (scroll.rtl ? -1 : 1);
 
 /** Measured [from, to] for a beat, or the whole page if not measured yet. */
 export const rangeOf = (id: string): [number, number] =>

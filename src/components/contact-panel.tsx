@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import { Nav } from "@/components/nav";
+import { useLocale } from "@/components/providers";
 import { usePrefersReducedMotion } from "@/components/story-page";
 import { useLenis } from "@/lib/scroll";
 import { t } from "@/lib/content";
@@ -20,22 +21,25 @@ const ContactScene = dynamic(
 type Status = "idle" | "sending" | "sent" | "error";
 type Errors = Partial<Record<string, string>>;
 
-const OFFICES = [
-  {
-    name: t("contact.info.office_jordan"),
-    address: t("contact.info.address_jordan"),
-    phone: t("contact.info.phone_jordan"),
-  },
-  {
-    name: t("contact.info.office_sa"),
-    address: t("contact.info.address_sa"),
-    phone: t("contact.info.phone_sa"),
-  },
-];
+/**
+ * Read per render rather than built at module scope.
+ *
+ * As a module constant this list was evaluated once, at import — which froze
+ * it in whichever language happened to load first and left the Arabic page
+ * showing English offices.
+ */
+const OFFICE_KEYS = ["jordan", "sa"] as const;
 
 export function ContactPanel() {
   const reduced = usePrefersReducedMotion();
+  const locale = useLocale();
   useLenis(!reduced);
+
+  const offices = OFFICE_KEYS.map((k) => ({
+    name: t(locale, `contact.info.office_${k}`),
+    address: t(locale, `contact.info.address_${k}`),
+    phone: t(locale, `contact.info.phone_${k}`),
+  }));
 
   const [status, setStatus] = useState<Status>("idle");
   const [errors, setErrors] = useState<Errors>({});
@@ -50,11 +54,11 @@ export function ContactPanel() {
     const email = String(data.get("email") ?? "").trim();
     const message = String(data.get("message") ?? "").trim();
 
-    if (!name) next.name = t("contact.form.error_required");
-    if (!email) next.email = t("contact.form.error_required");
+    if (!name) next.name = t(locale, "contact.form.error_required");
+    if (!email) next.email = t(locale, "contact.form.error_required");
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      next.email = t("contact.form.error_email");
-    if (message.length < 10) next.message = t("contact.form.error_minlength");
+      next.email = t(locale, "contact.form.error_email");
+    if (message.length < 10) next.message = t(locale, "contact.form.error_minlength");
 
     setErrors(next);
     if (Object.keys(next).length) {
@@ -83,20 +87,20 @@ export function ContactPanel() {
       {/* Bloom off: this page is about reading and typing, and glow behind a
           form is exactly the decoration that costs legibility. */}
       <Stage bloom={0}>
-        <ContactScene reduced={reduced} />
+        <ContactScene reduced={reduced} locale={locale} />
       </Stage>
 
       <main className="contact">
         <header className="contact__head">
-          <p className="beat__kicker">{t("brand.name")}</p>
-          <h1 className="beat__title">{t("contact.hero.title")}</h1>
-          <p className="beat__body">{t("contact.hero.subtitle")}</p>
+          <p className="beat__kicker">{t(locale, "brand.name")}</p>
+          <h1 className="beat__title">{t(locale, "contact.hero.title")}</h1>
+          <p className="beat__body">{t(locale, "contact.hero.subtitle")}</p>
         </header>
 
         <div className="contact__grid">
           <section className="panel">
-            <h2 className="panel__title">{t("contact.form.title")}</h2>
-            <p className="panel__sub">{t("contact.form.subtitle")}</p>
+            <h2 className="panel__title">{t(locale, "contact.form.title")}</h2>
+            <p className="panel__sub">{t(locale, "contact.form.subtitle")}</p>
 
             <form onSubmit={onSubmit} noValidate className="form">
               {/* Honeypot — bots fill it, humans never see it */}
@@ -106,7 +110,7 @@ export function ContactPanel() {
               </div>
 
               <div className="form__row">
-                <Field id="name" label={t("contact.form.name")} error={errors.name} required>
+                <Field id="name" label={t(locale, "contact.form.name")} error={errors.name} required>
                   <input
                     id="name"
                     name="name"
@@ -115,7 +119,7 @@ export function ContactPanel() {
                     className="input"
                   />
                 </Field>
-                <Field id="email" label={t("contact.form.email")} error={errors.email} required>
+                <Field id="email" label={t(locale, "contact.form.email")} error={errors.email} required>
                   <input
                     id="email"
                     name="email"
@@ -128,15 +132,15 @@ export function ContactPanel() {
               </div>
 
               <div className="form__row">
-                <Field id="company" label={t("contact.form.company")}>
+                <Field id="company" label={t(locale, "contact.form.company")}>
                   <input id="company" name="company" autoComplete="organization" className="input" />
                 </Field>
-                <Field id="phone" label={t("contact.form.phone")}>
+                <Field id="phone" label={t(locale, "contact.form.phone")}>
                   <input id="phone" name="phone" type="tel" autoComplete="tel" className="input" />
                 </Field>
               </div>
 
-              <Field id="message" label={t("contact.form.message")} error={errors.message} required>
+              <Field id="message" label={t(locale, "contact.form.message")} error={errors.message} required>
                 <textarea
                   id="message"
                   name="message"
@@ -147,40 +151,47 @@ export function ContactPanel() {
               </Field>
 
               <button type="submit" className="btn btn--primary" disabled={status === "sending"}>
-                {status === "sending" ? t("contact.form.submitting") : t("contact.form.submit")}
+                {status === "sending" ? t(locale, "contact.form.submitting") : t(locale, "contact.form.submit")}
               </button>
 
               <div aria-live="polite">
                 {status === "sent" && (
-                  <p className="note note--ok">{t("contact.form.success")}</p>
+                  <p className="note note--ok">{t(locale, "contact.form.success")}</p>
                 )}
                 {status === "error" && (
-                  <p className="note note--bad">{t("contact.form.error")}</p>
+                  <p className="note note--bad">{t(locale, "contact.form.error")}</p>
                 )}
               </div>
             </form>
           </section>
 
           <aside className="panel panel--quiet">
-            <h2 className="panel__title">{t("contact.info.title")}</h2>
+            <h2 className="panel__title">{t(locale, "contact.info.title")}</h2>
             <ul className="offices">
-              {OFFICES.map((o) => (
+              {offices.map((o) => (
                 <li key={o.name}>
                   <p className="offices__name">{o.name}</p>
                   <p className="offices__line">{o.address}</p>
-                  <a className="offices__link" href={`tel:${o.phone.replace(/\s/g, "")}`}>
+                  {/* A phone number is read left-to-right in both languages;
+                      without this the leading "+" is reordered to the far end
+                      inside an RTL paragraph. */}
+                  <a
+                    className="offices__link"
+                    href={`tel:${o.phone.replace(/\s/g, "")}`}
+                    dir="ltr"
+                  >
                     {o.phone}
                   </a>
                 </li>
               ))}
               <li>
-                <p className="offices__name">{t("contact.info.hours_label")}</p>
-                <p className="offices__line">{t("contact.info.hours")}</p>
+                <p className="offices__name">{t(locale, "contact.info.hours_label")}</p>
+                <p className="offices__line">{t(locale, "contact.info.hours")}</p>
               </li>
               <li>
-                <p className="offices__name">{t("contact.info.email_label")}</p>
-                <a className="offices__link" href={`mailto:${t("footer.email")}`}>
-                  {t("footer.email")}
+                <p className="offices__name">{t(locale, "contact.info.email_label")}</p>
+                <a className="offices__link" href={`mailto:${t(locale, "footer.email")}`}>
+                  {t(locale, "footer.email")}
                 </a>
               </li>
             </ul>

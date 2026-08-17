@@ -956,12 +956,14 @@
       "jordan": {
         "country": "Jordan",
         "address": "Zahran St 34, Amman, Jordan",
-        "phone": "+962 7 7599 9908"
+        "phone": "+962 7 7599 9908",
+        "city": "Amman"
       },
       "saudi": {
         "country": "Saudi Arabia",
         "address": "Murabba 6479, Riyadh, Saudi Arabia",
-        "phone": "+966 56 344 7279"
+        "phone": "+966 56 344 7279",
+        "city": "Riyadh"
       },
       "hours": "Sun–Thu: 8 AM – 4 PM · Fri & Sat: Closed"
     },
@@ -1114,5 +1116,13 @@
     "back_home": "Back to home",
     "contact": "Contact us",
     "try": "Or try"
+  },
+  "ui": {
+    "scroll": "Scroll",
+    "language_label": "Language",
+    "language_switch": "Change language"
+  },
+  "trust": {
+    "built_on": "Built on"
   }
 }

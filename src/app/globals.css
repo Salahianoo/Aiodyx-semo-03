@@ -1,30 +1,68 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------
-   A deliberately different identity from the AIODYX rebuild:
-   near-black cinema ground, one violet accent (Odoo's own family),
-   Inter rather than IBM Plex. Monochrome chrome — colour comes only
-   from the 3D modules themselves.
+   Paper ground, one violet accent (Odoo's own family), Inter for
+   Latin and IBM Plex Sans Arabic for Arabic. Monochrome chrome —
+   colour comes only from the 3D modules themselves.
    ------------------------------------------------------------------ */
 
+/* --------------------------------------------------------------- palette
+
+   One ground. `--ink` is the ground and `--paper` is the text — the names
+   describe the *role*, not the colour, which is why they survived the site
+   going light. `--ink` must stay in step with `SCENE.ground` in theme.ts: the
+   canvas is transparent and sits over it, so drift shows up as a seam.      */
+
 :root {
-  --ink: #050507;
-  --ink-soft: #0b0b11;
-  --paper: #f5f5f7;
-  --paper-dim: #a1a1aa;
-  --paper-faint: #6b6b76;
-  --accent: #8b5cf6;
-  --accent-bright: #a78bfa;
+  color-scheme: light;
+
+  --ink: #f4f5f9;
+  --ink-soft: #ffffff;
+  --paper: #14161f;
+  --paper-dim: #4b5060;
+  --paper-faint: #767c8f;
+  --accent: #6d28d9;
+  --accent-bright: #5b21b6;
+
+  /* The AI monogram, in the real brand navy. */
+  --brand-mark: #13308a;
+
+  /* The halo that keeps copy legible over the scene. It is *light*: a dark
+     shadow under dark text on a light ground only smears the letterforms.
+     What the glyphs need is separating from the particles behind them, which
+     means pushing the ground up rather than down. */
+  --scrim: 244, 245, 249;
+  --scrim-strong: 0.92;
+  --scrim-soft: 0.75;
+
+  --line: color-mix(in oklab, var(--paper) 14%, transparent);
+  --line-strong: color-mix(in oklab, var(--paper) 26%, transparent);
+  --surface: color-mix(in oklab, var(--ink-soft) 94%, transparent);
+  --surface-quiet: color-mix(in oklab, var(--ink-soft) 82%, transparent);
+  --pill: color-mix(in oklab, var(--ink-soft) 88%, transparent);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ------------------------------------------------------------------ type
+
+   Inter carries no Arabic at all, so this is not a stylistic preference —
+   on /ar the Latin face would render every glyph as a missing box.          */
+
+:root {
+  --font-ui: var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root:lang(ar) {
+  --font-ui: var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-paper: var(--paper);
   --color-accent: var(--accent);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-ui);
 }
 
 html {
@@ -36,7 +74,7 @@ html {
 body {
   background: var(--ink);
   color: var(--paper);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -119,8 +157,8 @@ body {
 .beat__points li,
 .card {
   text-shadow:
-    0 1px 3px rgba(4, 4, 9, 0.95),
-    0 2px 14px rgba(4, 4, 9, 0.85);
+    0 1px 3px rgba(var(--scrim), var(--scrim-strong)),
+    0 2px 14px rgba(var(--scrim), var(--scrim-soft));
 }
 
 .beat__points {
@@ -134,12 +172,12 @@ body {
 /* Filled, not outlined: a transparent pill over a lit 3D card is unreadable
    whatever colour the text is. */
 .beat__points li {
-  border: 1px solid color-mix(in oklab, var(--paper) 14%, transparent);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.4rem 0.9rem;
   font-size: 0.8125rem;
   color: var(--paper);
-  background: color-mix(in oklab, var(--ink) 82%, transparent);
+  background: var(--pill);
   backdrop-filter: blur(10px);
 }
 
@@ -161,11 +199,11 @@ body {
 }
 
 .card {
-  border: 1px solid color-mix(in oklab, var(--paper) 12%, transparent);
+  border: 1px solid var(--line);
   border-radius: 0.9rem;
   /* Near-opaque: these carry body copy over a moving scene, and a see-through
      panel is the classic legibility trap. */
-  background: color-mix(in oklab, var(--ink-soft) 92%, transparent);
+  background: var(--surface);
   padding: 0.95rem 1.1rem;
   backdrop-filter: blur(14px);
 }
@@ -200,8 +238,8 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.25rem clamp(1.25rem, 4vw, 2.5rem);
-  /* No background: the page is near-black already, and a bar would break
-     the full-bleed scene. A scrim only where the text sits. */
+  /* No background: a bar would break the full-bleed scene. A scrim only where
+     the text sits. */
   background: linear-gradient(
     to bottom,
     color-mix(in oklab, var(--ink) 82%, transparent),
@@ -210,7 +248,8 @@ body {
   pointer-events: none;
 }
 
-.nav a {
+.nav a,
+.nav button {
   pointer-events: auto;
 }
 
@@ -223,24 +262,6 @@ body {
   display: block;
   height: 19px;
   width: auto;
-}
-
-/* Home is white; the other three are near-black. Only colour differs. */
-.nav[data-theme="light"] {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0));
-}
-
-.nav[data-theme="light"] .nav__brand {
-  color: #1a2340;
-}
-
-.nav[data-theme="light"] .nav__link {
-  color: #5a6478;
-}
-
-.nav[data-theme="light"] .nav__link[data-active="true"],
-.nav[data-theme="light"] .nav__link:hover {
-  color: #0a1024;
 }
 
 .nav__list {
@@ -266,6 +287,55 @@ body {
   .nav__link:hover {
     color: var(--paper);
   }
+}
+
+/* --------------------------------------------------------- nav switches */
+
+.nav__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Quiet enough to sit next to the links without competing with them, solid
+   enough to stay readable over whatever the scene is doing behind it. */
+.nav__switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 2rem;
+  height: 2rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--pill);
+  color: var(--paper-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav__switch:hover {
+    color: var(--paper);
+    border-color: var(--line-strong);
+  }
+}
+
+/* The home close is the tallest copy block on the site — headline, subtitle,
+   two buttons, two office cards and the working week — and the field resolves
+   into the AIODYX logotype underneath it. Centred, it splits the frame evenly
+   and leaves the mark a sliver at the bottom edge; this gives the lower band
+   back. Keyed off `data-last`, not the beat id, because "close" is the id on
+   three different pages. */
+.story--signed .beat[data-last="true"] {
+  padding-bottom: clamp(6rem, 17vh, 11rem);
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -305,7 +375,7 @@ body {
 }
 
 .btn--ghost {
-  border: 1px solid color-mix(in oklab, var(--paper) 22%, transparent);
+  border: 1px solid var(--line-strong);
   color: var(--paper);
 }
 
@@ -350,15 +420,15 @@ body {
 /* Solid, not glass: form fields need a stable ground to read against, and a
    translucent panel over a moving scene is the classic legibility trap. */
 .panel {
-  background: color-mix(in oklab, var(--ink-soft) 94%, transparent);
-  border: 1px solid color-mix(in oklab, var(--paper) 10%, transparent);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 1.5rem;
   padding: clamp(1.5rem, 3vw, 2.25rem);
   backdrop-filter: blur(24px);
 }
 
 .panel--quiet {
-  background: color-mix(in oklab, var(--ink-soft) 78%, transparent);
+  background: var(--surface-quiet);
 }
 
 .panel__title {
@@ -379,9 +449,12 @@ body {
   gap: 1.1rem;
 }
 
+/* Off-screen, on whichever side is off-screen. A physical `left: -9999px`
+   puts the honeypot *on* the page under RTL, where a real person can tab into
+   it and fail the spam check by filling it in. */
 .form__trap {
   position: absolute;
-  left: -9999px;
+  inset-inline-start: -9999px;
 }
 
 .form__row {
@@ -409,8 +482,9 @@ body {
 .input {
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid color-mix(in oklab, var(--paper) 14%, transparent);
-  background: color-mix(in oklab, var(--ink) 70%, transparent);
+  border: 1px solid var(--line-strong);
+  /* Fields need a ground that is clearly *not* the page, in either theme. */
+  background: color-mix(in oklab, var(--ink-soft) 70%, transparent);
   color: var(--paper);
   padding: 0.7rem 0.9rem;
   font: inherit;
@@ -502,6 +576,68 @@ body {
   color: var(--paper-faint);
   transition: opacity 500ms var(--ease-out);
   pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- arabic
+
+   Arabic is not Latin with the direction reversed, and most of the type
+   detailing on this page is actively wrong for it.
+
+   `dir` is set on <html> from the route, so flexbox, `text-align: start` and
+   every logical property flip on their own — those need no rules here. What
+   follows is only the part the browser cannot infer.                        */
+
+:lang(ar) {
+  /* Arabic has no capitals, so `text-transform: uppercase` does nothing — but
+     the tracking that goes with a Latin all-caps label is destructive: it
+     pulls apart glyphs that are supposed to join, and a disjointed Arabic
+     word is genuinely harder to read, not just differently styled. */
+  --kicker-tracking: 0;
+}
+
+:lang(ar) .beat__kicker,
+:lang(ar) .offices__country,
+:lang(ar) .offices__name,
+:lang(ar) .hint {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Negative tracking is a Latin display-type convention. Arabic letterforms
+   already sit tight and connect; pulling them closer smudges the joins. */
+:lang(ar) .beat__title,
+:lang(ar) .beat__body {
+  letter-spacing: 0;
+}
+
+/* Arabic runs taller than Latin at the same nominal size — ascenders,
+   descenders and the marks above and below both — so the Latin line heights
+   crowd it. */
+:lang(ar) .beat__title {
+  line-height: 1.25;
+}
+
+:lang(ar) .beat__body,
+:lang(ar) .card__text {
+  line-height: 1.8;
+}
+
+/* IBM Plex Sans Arabic stops at 700 where Inter reaches 800, so the services
+   `bold` variant would ask for a weight that does not exist and get a
+   synthesised — smeared — one. Capped at the real face. */
+:lang(ar) .story--bold .beat__title {
+  font-weight: 700;
+}
+
+/* Latin fragments inside Arabic prose: brand names, "Odoo", "ERP", and every
+   phone number. The bidi algorithm handles the letters, but a leading "+" or
+   a trailing "." is neutral and gets pulled to the wrong end of the run. */
+:lang(ar) .offices__tel,
+:lang(ar) .offices__link {
+  direction: ltr;
+  /* The number is still part of an Arabic block, so it stays on the side the
+     rest of the card is aligned to. */
+  text-align: start;
 }
 
 /* --------------------------------------------------------------- a11y */
