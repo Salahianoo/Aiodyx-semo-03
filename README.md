@@ -53,7 +53,7 @@ material organised.
 | open | six ERP glyphs on a ring, copy in the hub |
 | problems ×2 | the same six glyphs, flung apart and tumbling |
 | flow | the six drawn inward on a twist, colours draining |
-| assembly | the ring — all ten modules named at once |
+| assembly | the ring — ten modules named, AIODYX + Odoo in the hub |
 | modules ×10 | a scene per module: four people, six objects |
 | ai | every cluster wired through the middle |
 | why | a lattice; six columns, because there are six reasons |
@@ -197,6 +197,43 @@ from the formation weights — all ten beats share one formation, so
 `uW[MODULE]` is their *total* and says nothing about which. The anchor table
 carries a module index alongside the beat id, and the pair is written in place
 next to the weights.
+
+### The hub is a signature, not an object
+
+The middle of the ring held a wireframe icosahedron — the last abstract object
+left on a page that had become entirely depiction, and the only thing on it
+that *appeared* rather than resolved. It is now the AIODYX wordmark with Odoo
+under it, drawn from the same twelve thousand points as everything else, so the
+lockup arrives on the same weight blend and cannot pop.
+
+Both marks are rasterised **split by colour**, because a logotype in one flat
+colour is that logotype with its one distinguishing feature removed: AIODYX
+keeps its navy "AI" monogram against ink letters, Odoo its magenta leading "o"
+against neutral ones. Each half is sampled at the same raster width as its
+partner so the two land in one coordinate system rather than each being
+re-fitted to its own bounding box, and within each mark the pick is weighted by
+**area** — the accent is fewer glyphs than the neutral half, so a coin flip
+would make it several times denser.
+
+The hub points are taken as `i % 50 < 15` rather than as a block. Every point
+also has a position in every other formation, and a contiguous slice would
+arrive at the ring as one lump of whichever cluster it came from.
+
+They opt out of the cluster hues in the shader. They sit inside the ring but
+they are a logotype, not an eleventh module.
+
+### Two things the drift broke
+
+- **A line has to be wider than the noise displacing it.** The rule between the
+  marks was 0.022 thick against an idle breath of 0.048 and arrived as a band
+  of specks. It is 0.055 now.
+- **`TURB[RING]` went to 0.22.** Even at 0.4 the drift was a third of the
+  stroke width on "odoo" and its letters ran together. The clusters give up
+  nearly all their breath for it, which costs nothing — they are clouds, and a
+  cloud that breathes less does not look wrong. `SIZE[RING]` also went to 1.45,
+  because at 17.8 back its points were landing near two and a half pixels and
+  letterforms need more than that to hold together.
+
 
 ### Scenes do not know which module they are
 

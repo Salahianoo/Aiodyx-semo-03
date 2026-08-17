@@ -26,6 +26,20 @@ export const WORDMARK_PATHS = [
   "M428,355.3l205.84,413.52h-304.12l46.83-68.33h141.8l-90.47-186.39-126.27,254.72h-81.3l207.68-413.52Z",
 ];
 
+/**
+ * The mark, split the way the SVG colours it.
+ *
+ * The first four paths are "ODYX" and take `currentColor`; the last two are
+ * the "AI" monogram, which keeps a fixed colour. Anything drawing the wordmark
+ * as particles needs the split — a logotype in one flat colour is the logotype
+ * with its one distinguishing feature removed.
+ */
+export const WORDMARK_LETTER_PATHS = WORDMARK_PATHS.slice(0, 4);
+export const WORDMARK_MONOGRAM_PATHS = WORDMARK_PATHS.slice(4);
+
+/** Brand navy, as drawn. Correct on paper and invisible on black. */
+export const BRAND_NAVY = "#13308a";
+
 export function Wordmark({
   className,
   /**

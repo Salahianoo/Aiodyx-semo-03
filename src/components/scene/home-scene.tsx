@@ -5,7 +5,13 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
 
-import { WORDMARK_PATHS, WORDMARK_VIEWBOX } from "@/components/brand";
+import {
+  BRAND_NAVY,
+  WORDMARK_LETTER_PATHS,
+  WORDMARK_MONOGRAM_PATHS,
+  WORDMARK_PATHS,
+  WORDMARK_VIEWBOX,
+} from "@/components/brand";
 import type { SceneEnv } from "@/components/story-page";
 import { arabicFontUrl, displayCase, displayTracking } from "@/lib/fonts";
 import type { Locale } from "@/lib/i18n";
@@ -21,7 +27,6 @@ import {
 import { rasterize, shuffle, type MarkSample } from "@/lib/raster";
 import { buildBeats, MODULES, moduleBeatOffset, moduleCopy } from "@/lib/story";
 import {
-  beat,
   clamp,
   damp,
   owns,
@@ -79,6 +84,50 @@ const MARK_AR = WORDMARK_VIEWBOX.h / WORDMARK_VIEWBOX.w;
  * at 5.5 the ring fitted the frame's width and was cropped top and bottom.
  */
 const RING_R = 4.5;
+
+/**
+ * The signature in the middle of the ring: AIODYX, and Odoo under it.
+ *
+ * The hub used to hold a wireframe icosahedron — the last abstract object left
+ * on a page that had become entirely depiction, and the one thing on it that
+ * appeared rather than resolved. These are the same twelve thousand points, so
+ * the lockup arrives on the same weight blend as everything else and cannot
+ * pop.
+ *
+ * Sized against the hub's clear radius. The clusters sit at 4.5 with a 0.72
+ * spread, so anything inside about 3.2 is safe; the far corner of this stack
+ * lands at 2.7.
+ */
+const HUB_MARK_W = 4.4;
+const HUB_MARK_Y = 0.66;
+// Two thirds of AIODYX rather than under half. At 1.9 the two marks read as a
+// logo and a footnote instead of a lockup, and "odoo" is four letters inside
+// what was 125 screen pixels.
+const HUB_ODOO_W = 2.4;
+const HUB_ODOO_Y = -0.72;
+const HUB_RULE_Y = -0.06;
+const HUB_RULE_W = 0.8;
+/**
+ * Thick enough to survive the idle drift.
+ *
+ * At 0.022 the rule was thinner than the breath moving it, so it arrived as a
+ * band of specks. A line has to be wider than the noise displacing it or it is
+ * not a line.
+ */
+const HUB_RULE_T = 0.055;
+
+/**
+ * Which points make up the hub, spread through the field rather than taken as
+ * a block. Every point also has a position in every other formation, and a
+ * contiguous slice would arrive at the ring as one lump of the cluster it came
+ * from.
+ */
+const HUB_EVERY = 50;
+const HUB_TAKE = 15;
+const isHub = (i: number) => i % HUB_EVERY < HUB_TAKE;
+
+/** Colour bands for the hub, read as `aHub` in the shader. */
+const HUB = { none: 0, letters: 1, monogram: 2, odooA: 3, odooB: 4 } as const;
 
 /**
  * The icon ring. An ellipse rather than a circle, because the hole in the
@@ -251,7 +300,10 @@ const ALPHA = [0.85, 0.55, 0.7, 0.85, 0.8, 0.7, 1.0, 0.98];
  * be *read* rather than felt needs its marks to hold together, so it pays for
  * that here rather than by crowding the camera in.
  */
-const SIZE = [1.75, 1, 1, 1, 1, 1, 1, 1];
+// The ring sits second-furthest back, and now carries a logotype in its hub —
+// at 17.8 its points land near two and a half pixels, which is speckle rather
+// than letterforms.
+const SIZE = [1.75, 1, 1, 1.45, 1, 1, 1, 1];
 
 /**
  * Per-formation turbulence, and the reason detailed formations need it.
@@ -266,7 +318,12 @@ const SIZE = [1.75, 1, 1, 1, 1, 1, 1, 1];
  * clouds keeps its full breath and a formation made of drawing gets almost
  * none.
  */
-const TURB = [0.65, 1, 1, 1, 1, 1, 0.4, 0.18];
+// Same lesson the Odoo mark taught on the ledger: the ±0.12 idle breath is as
+// wide as a wordmark's strokes. At 0.4 the drift was still a third of the
+// stroke width on "odoo" and its letters ran together. The clusters give up
+// nearly all their drift so the signature between them stays crisp — they are
+// clouds, and a cloud that breathes less is not a cloud that looks wrong.
+const TURB = [0.65, 1, 1, 0.22, 1, 1, 0.4, 0.18];
 
 /** Deterministic PRNG — the field must be identical on every load. */
 function mulberry32(seed: number) {
@@ -289,6 +346,22 @@ function mulberry32(seed: number) {
  */
 function markPoints(rand: () => number): [number, number][] {
   return shuffle(rasterize(WORDMARK_PATHS, WORDMARK_VIEWBOX, 420), rand);
+}
+
+/**
+ * The AIODYX mark, split into letters and monogram.
+ *
+ * Rasterised at one width so both halves land in the same coordinate system —
+ * the monogram has to sit where it belongs beside "ODYX" rather than being
+ * re-fitted to its own bounding box.
+ */
+function aiodyxSample(rand: () => number): MarkSample {
+  const W = 360;
+  return {
+    accent: shuffle(rasterize(WORDMARK_MONOGRAM_PATHS, WORDMARK_VIEWBOX, W), rand),
+    plain: shuffle(rasterize(WORDMARK_LETTER_PATHS, WORDMARK_VIEWBOX, W), rand),
+    aspect: WORDMARK_VIEWBOX.h / WORDMARK_VIEWBOX.w,
+  };
 }
 
 /**
@@ -348,6 +421,8 @@ function buildField(): Field {
   const local = new Float32Array(COUNT * 3);
   /** The point's row in the module texture. */
   const index = new Float32Array(COUNT);
+  /** Which band of the hub lockup a point belongs to; 0 for everything else. */
+  const hub = new Float32Array(COUNT);
 
   const gauss = () =>
     (rand() + rand() + rand() + rand() - 2) * 0.7; // cheap normal-ish
@@ -355,6 +430,7 @@ function buildField(): Field {
   const nodes = NODES;
   const marks = markPoints(rand);
   const odoo = odooSample(rand);
+  const aiodyx = aiodyxSample(rand);
   const v = new THREE.Vector3();
   const g2 = { x: 0, y: 0 };
 
@@ -423,7 +499,38 @@ function buildField(): Field {
        seventh of the field stays on the ring itself, so the modules read as
        joined rather than as ten separate clouds. */
     const node = nodes[c];
-    if (i % 7 === 0) {
+    if (isHub(i)) {
+      // The signature in the hole. Sampled by area within each mark so the
+      // monogram, which is two glyphs of six, does not come out three times
+      // denser than the letters beside it.
+      const band = rand();
+      if (band < 0.04) {
+        // A rule between the two marks. Stacked bare they read as two
+        // unrelated logos; this makes it one "X, built on Y" lockup.
+        pos[RING][k] = (rand() - 0.5) * HUB_RULE_W;
+        pos[RING][k + 1] = HUB_RULE_Y + (rand() - 0.5) * HUB_RULE_T;
+        hub[i] = HUB.odooB;
+      } else if (band < 0.34) {
+        // Sampled by area within each mark, so the accent letter does not come
+        // out denser than the neutral ones beside it.
+        const total = odoo.accent.length + odoo.plain.length;
+        const useA = total > 0 && rand() * total < odoo.accent.length;
+        const src = useA ? odoo.accent : odoo.plain;
+        const [mx, my] = src.length ? src[Math.floor(rand() * src.length)] : [0, 0];
+        pos[RING][k] = mx * HUB_ODOO_W;
+        pos[RING][k + 1] = HUB_ODOO_Y + my * HUB_ODOO_W * odoo.aspect;
+        hub[i] = useA ? HUB.odooA : HUB.odooB;
+      } else {
+        const total = aiodyx.accent.length + aiodyx.plain.length;
+        const useA = total > 0 && rand() * total < aiodyx.accent.length;
+        const src = useA ? aiodyx.accent : aiodyx.plain;
+        const [mx, my] = src.length ? src[Math.floor(rand() * src.length)] : [0, 0];
+        pos[RING][k] = mx * HUB_MARK_W;
+        pos[RING][k + 1] = HUB_MARK_Y + my * HUB_MARK_W * aiodyx.aspect;
+        hub[i] = useA ? HUB.monogram : HUB.letters;
+      }
+      pos[RING][k + 2] = gauss() * 0.1;
+    } else if (i % 7 === 0) {
       const a = rand() * Math.PI * 2;
       pos[RING][k] = Math.cos(a) * RING_R + gauss() * 0.13;
       pos[RING][k + 1] = Math.sin(a) * RING_R + gauss() * 0.13;
@@ -537,6 +644,7 @@ function buildField(): Field {
   geometry.setAttribute("aIcon", new THREE.BufferAttribute(icon, 1));
   geometry.setAttribute("aLocal", new THREE.BufferAttribute(local, 3));
   geometry.setAttribute("aIndex", new THREE.BufferAttribute(index, 1));
+  geometry.setAttribute("aHub", new THREE.BufferAttribute(hub, 1));
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 40);
 
   return { geometry, moduleTex };
@@ -597,6 +705,7 @@ const UNIFORMS = {
   uModB: { value: 0 },
   uModMix: { value: 0 },
   /** Fixed slots in the scene palette; the accent comes from the module. */
+  uBrand: { value: new THREE.Color(BRAND_NAVY) },
   uOdooA: { value: new THREE.Color(ODOO_MAGENTA) },
   uOdooB: { value: new THREE.Color(ODOO_NEUTRAL) },
   uWarm: { value: new THREE.Color(MODULE_HUES.payroll) },
@@ -672,6 +781,7 @@ const MATERIAL = new THREE.ShaderMaterial({
     attribute float aCluster;
     attribute float aSeed;
     attribute float aIndex;
+    attribute float aHub;
     attribute float aIcon;
     attribute vec3 aLocal;
 
@@ -691,6 +801,7 @@ const MATERIAL = new THREE.ShaderMaterial({
     uniform float uModA;
     uniform float uModB;
     uniform float uModMix;
+    uniform vec3 uBrand;
     uniform vec3 uOdooA;
     uniform vec3 uOdooB;
     uniform vec3 uWarm;
@@ -782,12 +893,25 @@ const MATERIAL = new THREE.ShaderMaterial({
       // the formations silently pointed the module hues at the wrong three —
       // the ring went grey while its labels stayed coloured, which is the
       // kind of bug that looks like a palette decision.
+      //
+      // The hub lockup opts out: it sits inside the ring but is a logotype,
+      // not an eleventh cluster, so it must not take a cluster hue.
+      float hub = step(0.5, aHub);
       float hueAmt = clamp(
         uW[${RING}] + uW[${WEAVE}] * 0.85 + uW[${LATTICE}] * 0.3,
         0.0,
         1.0
-      );
+      ) * (1.0 - hub);
       vec3 col = mix(uBase, uCluster[int(aCluster)], hueAmt);
+
+      // Only while the ring holds the frame. Everywhere else these are
+      // ordinary points and take whatever their formation is wearing.
+      vec3 hubCol =
+          aHub < 1.5 ? uBase
+        : aHub < 2.5 ? uBrand
+        : aHub < 3.5 ? uOdooA
+        : uOdooB;
+      col = mix(col, hubCol, hub * uW[${RING}]);
 
       // The figure is two materials, not one: the person in the field's own
       // ink and the ledger and chart in the module's hue. Tinting the whole
@@ -1236,58 +1360,11 @@ function Field({ reduced, locale }: SceneEnv) {
   );
 }
 
-/**
- * The one lit object in the scene: a small core sitting at the origin, so the
- * field has something to have come from and to close around.
- */
-function Heart({ reduced }: { reduced: boolean }) {
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
-  const mesh = useRef<THREE.Mesh>(null);
-
-  useFrame((state, delta) => {
-    const dt = Math.min(delta, 1 / 30);
-    const p = scroll.progress;
-    const [assemblyFrom] = rangeOf("assembly");
-    const [aiFrom] = rangeOf("ai");
-
-    // Present from the moment the field gathers until the wiring beat takes
-    // over the centre — except under a module scene, where the origin is hip
-    // height on a figure and mid-panel on the rest.
-    const show =
-      beat(p, assemblyFrom - 0.06, assemblyFrom + 0.02) *
-      (1 - beat(p, aiFrom, aiFrom + 0.04)) *
-      (1 - UNIFORMS.uW.value[MODULE]);
-
-    if (mat.current) mat.current.opacity = damp(mat.current.opacity, show * 0.5, 3, dt);
-    if (mesh.current) {
-      const s = 0.28 + show * 0.22;
-      mesh.current.scale.setScalar(damp(mesh.current.scale.x, Math.max(s, 0.001), 3, dt));
-      if (!reduced) mesh.current.rotation.y = state.clock.elapsedTime * 0.25;
-    }
-  });
-
-  return (
-    <mesh ref={mesh} scale={0.001}>
-      <icosahedronGeometry args={[1, 1]} />
-      {/* Same story as the field: an additive wireframe is nothing on paper. */}
-      <meshBasicMaterial
-        ref={mat}
-        color={MODULE_HUES.support}
-        transparent
-        opacity={0}
-        wireframe
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
 export function HomeScene(env: SceneEnv) {
   return (
     <>
       <Starfield reduced={env.reduced} />
       <Field {...env} />
-      <Heart reduced={env.reduced} />
     </>
   );
 }
