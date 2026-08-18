@@ -41,6 +41,10 @@
     "not-found": {
       "title": "Page not found | AIODYX",
       "description": "The page you are looking for does not exist or may have moved."
+    },
+    "integrations": {
+      "title": "Odoo Integrations — ZATCA, GOSI & QIWA | AIODYX",
+      "description": "We connect Odoo to the national platforms your business already reports to — ZATCA e-invoicing, GOSI social insurance and QIWA — so the same record never gets typed twice."
     }
   },
   "brand": {
@@ -63,7 +67,8 @@
     "solutions_education": "Education",
     "solutions_healthcare": "Healthcare",
     "solutions_finance": "Finance",
-    "solutions_smes": "SMEs"
+    "solutions_smes": "SMEs",
+    "integrations": "Integrations"
   },
   "footer": {
     "tagline": "Custom ERP on Odoo — with AI that helps teams make smarter decisions.",
@@ -1124,5 +1129,101 @@
   },
   "trust": {
     "built_on": "Built on"
+  },
+  "integrations": {
+    "hero": {
+      "eyebrow": "Odoo Integrations",
+      "title": "Your ERP, Connected to the Platforms You Must Report To",
+      "subtitle": "We do not stop at implementing Odoo. We make it the centre every other system answers to — so a record entered once reaches the national platform that needs it, without anyone typing it again.",
+      "cta": "Talk to us about your integrations"
+    },
+    "why": {
+      "eyebrow": "Why It Matters",
+      "title": "A Disconnected System Charges You Every Month",
+      "subtitle": "An ERP that cannot reach the platforms you are obliged to file with has not removed the manual work. It has only moved it somewhere you cannot see.",
+      "b1": {
+        "title": "Entered Once, Everywhere",
+        "text": "A record is created in Odoo and travels to the platform that needs it — no second keyboard, no copying between portals at the end of the month."
+      },
+      "b2": {
+        "title": "Compliance as the Normal Path",
+        "text": "The filing rules live inside the system, so meeting them is what happens by default rather than a scramble before every deadline."
+      },
+      "b3": {
+        "title": "Numbers That Agree",
+        "text": "Invoicing, payroll and headcount come from one database, so the figure on your dashboard is the figure that was actually filed."
+      },
+      "b4": {
+        "title": "An Audit Trail You Can Show",
+        "text": "Every submission, acknowledgement and correction stays attached to the record that produced it."
+      }
+    },
+    "zatca": {
+      "eyebrow": "Integration 01",
+      "name": "ZATCA",
+      "authority": "Zakat, Tax and Customs Authority",
+      "subject": "E-Invoicing",
+      "title": "Invoices That Clear Before They Reach the Customer",
+      "text": "Your team keeps invoicing the way they already do. Odoo issues the document and the integration handles everything the regulation asks of it — the structured format, the cryptographic stamp, the QR code and the exchange with the authority.",
+      "p1": "Invoices produced in the required structured format",
+      "p2": "Cryptographic stamp and QR code applied on issue",
+      "p3": "Clearance and reporting handled at the moment of invoicing",
+      "p4": "Rejections returned to the invoice that caused them, with the reason",
+      "p5": "Credit and debit notes carried through the same path"
+    },
+    "gosi": {
+      "eyebrow": "Integration 02",
+      "name": "GOSI",
+      "authority": "General Organization for Social Insurance",
+      "subject": "Social Insurance",
+      "title": "Employee and Wage Data That Matches What You Filed",
+      "text": "Payroll and social insurance stop being two versions of the same truth. Joiners, leavers and wage changes are recorded once in Odoo, and the integration keeps the insurance side in step with them.",
+      "p1": "New employees registered from the HR record that created them",
+      "p2": "Wage and status changes reflected without a second entry",
+      "p3": "Contributions reconciled against the payroll run that produced them",
+      "p4": "Differences surfaced in Odoo rather than found at year end"
+    },
+    "qiwa": {
+      "eyebrow": "Integration 03",
+      "name": "QIWA",
+      "authority": "Ministry of Human Resources platform",
+      "subject": "Labour and Workforce",
+      "title": "Contracts and Workforce Status, Without a Second System",
+      "text": "The labour side of employment lives with the employee record instead of in a browser tab nobody owns. Contracts, transfers and workforce status are visible where your HR team already works.",
+      "p1": "Employment contracts raised against the Odoo employee record",
+      "p2": "Transfers and status changes tracked in one place",
+      "p3": "Workforce composition visible alongside your own HR reporting",
+      "p4": "Expiries and renewals raised before they become a problem"
+    },
+    "how": {
+      "eyebrow": "How We Build It",
+      "title": "Built Into the System, Not Bolted Beside It",
+      "subtitle": "An integration that lives outside your ERP becomes another thing to maintain. These are built as part of the system we deliver.",
+      "s1": {
+        "title": "We Map the Real Process First",
+        "text": "Before any connection is written we follow the document as your team actually handles it today, including the exceptions."
+      },
+      "s2": {
+        "title": "We Connect Through Official Channels",
+        "text": "Each integration uses the platform's own published interface, with credentials held in your environment and nothing routed through a third party."
+      },
+      "s3": {
+        "title": "We Test Against Real Scenarios",
+        "text": "Rejections, corrections, back-dated changes and month-end are all rehearsed with your data before launch."
+      },
+      "s4": {
+        "title": "We Stay After Launch",
+        "text": "Platforms change their requirements. Keeping the connection valid is part of the support we provide, not a new project."
+      }
+    },
+    "more": {
+      "eyebrow": "Beyond the Three",
+      "title": "If It Has an Interface, It Can Reach Your ERP",
+      "text": "Payment gateways, e-commerce storefronts, banks, logistics providers and the systems you already run — the same approach applies to anything that exposes a way in. Tell us what you need connected and we will tell you honestly what it takes."
+    },
+    "cta": {
+      "title": "Which of Your Systems Should Be Talking?",
+      "text": "A free session to map what you file today, where it is being re-entered, and what connecting it would actually involve."
+    }
   }
 }

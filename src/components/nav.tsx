@@ -11,6 +11,7 @@ import { localizePath, LOCALE_NAMES, LOCALE_SHORT, LOCALES } from "@/lib/i18n";
 const LINKS = [
   { href: "", key: "nav.home" },
   { href: "/services", key: "nav.services" },
+  { href: "/integrations", key: "nav.integrations" },
   { href: "/about", key: "nav.about" },
   { href: "/contact", key: "nav.contact" },
 ];
