@@ -39,6 +39,16 @@ export function rasterize(
   paths: readonly string[],
   viewBox: ViewBox,
   width: number,
+  /**
+   * The matrix on the source file's own group, if it has one.
+   *
+   * Illustrator and Inkscape both routinely author paths in one space and
+   * place them with a transform on the wrapping `<g>`. Filling the raw `d`
+   * data without composing that matrix puts the mark somewhere off-canvas and
+   * the sampler returns nothing at all — which looks exactly like a logo that
+   * failed to load.
+   */
+  transform?: readonly [number, number, number, number, number, number],
 ): [number, number][] {
   const W = Math.max(1, Math.round(width));
   const H = Math.max(1, Math.round((W * viewBox.h) / viewBox.w));
@@ -51,6 +61,9 @@ export function rasterize(
 
   const s = W / viewBox.w;
   ctx.setTransform(s, 0, 0, s, -viewBox.x * s, -viewBox.y * s);
+  // Composed after the viewBox fit, in the order the renderer would: the group
+  // matrix is inside the viewBox, not outside it.
+  if (transform) ctx.transform(...transform);
   ctx.fillStyle = "#fff";
   for (const d of paths) ctx.fill(new Path2D(d));
 

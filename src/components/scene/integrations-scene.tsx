@@ -14,6 +14,8 @@ import {
   authoritySubject,
   gateX,
 } from "@/lib/integrations-story";
+import { AUTHORITY_MARKS, type AuthorityMark } from "@/lib/authority-marks";
+import { rasterize } from "@/lib/raster";
 import { arabicFontUrl, displayCase } from "@/lib/fonts";
 import type { Locale } from "@/lib/i18n";
 import { isRtl } from "@/lib/i18n";
@@ -40,6 +42,132 @@ import { ACCENT, PEAK, SCENE } from "@/lib/theme";
 
 const GATE_R = 1.62;
 const LANE_Y = 0;
+
+/** How wide an authority's mark stands on the lane, after fitting. */
+const MARK_W = 4.6;
+const MARK_POINTS = 2800;
+
+/** A built mark, and the box it actually occupies. */
+type MarkCloud = {
+  geometry: THREE.BufferGeometry;
+  halfW: number;
+  halfH: number;
+};
+
+/* --------------------------------------------------------- authority marks */
+
+/**
+ * An authority's own logo, as a point cloud.
+ *
+ * The gates were rings — and a ring is a diagram of a gate, not a statement
+ * about who is on the other side of it. A visitor recognises the mark of the
+ * body they file with long before they read a heading, so the mark *is* the
+ * gate.
+ *
+ * Colour is baked into a vertex attribute rather than resolved in a shader.
+ * ZATCA's shield is twenty-four stripes running green through teal to blue,
+ * and the gradient is the thing that makes it recognisable; a flat fill would
+ * be the mark with its one identifying feature removed. Sampling the gradient
+ * by each point's position across the emblem reproduces it with one pass
+ * instead of twenty-four.
+ */
+function buildMark(mark: AuthorityMark): MarkCloud | null {
+  const emblem = rasterize(mark.emblem, mark.viewBox, 400, mark.transform);
+  const word = mark.emblemOnly
+    ? []
+    : rasterize(mark.word, mark.viewBox, 400, mark.transform);
+  if (!emblem.length && !word.length) return null;
+
+  // Both halves were rasterised at one width, so they already share a
+  // coordinate system — the wordmark sits where it belongs beside the emblem
+  // rather than being re-fitted to its own bounding box.
+  const aspect = mark.viewBox.h / mark.viewBox.w;
+
+  /**
+   * Fitted to what is actually drawn, not to the source viewBox.
+   *
+   * A logo's file is mostly empty space around the artwork, and drawing the
+   * symbol alone leaves the hole where its wordmark used to be. Measuring the
+   * sampled points and fitting those centres the mark and gives it the whole
+   * width, whichever half of the lockup ended up being used.
+   */
+  let lo = Infinity;
+  let hi = -Infinity;
+  let bot = Infinity;
+  let top = -Infinity;
+  for (const [x, y] of emblem) {
+    if (x < lo) lo = x;
+    if (x > hi) hi = x;
+    if (y < bot) bot = y;
+    if (y > top) top = y;
+  }
+  const emblemLo = lo;
+  const emblemSpan = Math.max(hi - lo, 1e-6);
+  for (const [x, y] of word) {
+    if (x < lo) lo = x;
+    if (x > hi) hi = x;
+    if (y < bot) bot = y;
+    if (y > top) top = y;
+  }
+
+  const cx = (lo + hi) / 2;
+  const cy = (bot + top) / 2;
+  // One scale for both axes, applied after the aspect correction, so the mark
+  // is fitted rather than stretched.
+  const k = MARK_W / Math.max(hi - lo, 1e-6);
+  const halfW = ((hi - lo) * k) / 2;
+  const halfH = ((top - bot) * aspect * k) / 2;
+
+  const stops = mark.gradient.map((c) => new THREE.Color(c));
+  const wordCol = new THREE.Color(mark.wordColor);
+  const mixed = new THREE.Color();
+
+  const pos = new Float32Array(MARK_POINTS * 3);
+  const col = new Float32Array(MARK_POINTS * 3);
+
+  // Deterministic: the mark must be identical on every load.
+  let seed = 0x9e37;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  // Drawn from the two lists concatenated, so density follows ink area and
+  // neither half comes out heavier than it is drawn.
+  const total = emblem.length + word.length;
+  for (let i = 0; i < MARK_POINTS; i++) {
+    const pickIdx = Math.floor(rand() * total);
+    const isEmblem = pickIdx < emblem.length;
+    const [px, py] = isEmblem ? emblem[pickIdx] : word[pickIdx - emblem.length];
+
+    const j = i * 3;
+    pos[j] = (px - cx) * k;
+    // The height carries the aspect, or a mark twice as wide as it is tall
+    // comes out square.
+    pos[j + 1] = (py - cy) * aspect * k;
+    pos[j + 2] = 0;
+
+    if (isEmblem && stops.length > 1) {
+      // Sampled across the *emblem's* own width, not the fitted box, so the
+      // gradient runs the way it was drawn even when a wordmark widens the box.
+      const t = ((px - emblemLo) / emblemSpan) * (stops.length - 1);
+      const a = Math.min(stops.length - 2, Math.max(0, Math.floor(t)));
+      mixed.copy(stops[a]).lerp(stops[a + 1], Math.min(1, Math.max(0, t - a)));
+    } else if (isEmblem) {
+      mixed.copy(stops[0]);
+    } else {
+      mixed.copy(wordCol);
+    }
+    col[j] = mixed.r;
+    col[j + 1] = mixed.g;
+    col[j + 2] = mixed.b;
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return { geometry: g, halfW, halfH };
+}
 
 /* ------------------------------------------------------------------ lane */
 
@@ -199,8 +327,15 @@ function Gate({
   const a = AUTHORITIES[index];
   const x = gateX(index);
 
-  const ring = useRef<THREE.Mesh>(null);
-  const ringMat = useRef<THREE.MeshBasicMaterial>(null);
+  const cloud = useMemo(() => {
+    const mark = AUTHORITY_MARKS[a.id];
+    return mark ? buildMark(mark) : null;
+  }, [a.id]);
+
+  const markHalf = cloud ? cloud.halfH : 0;
+
+  const ring = useRef<THREE.Points>(null);
+  const ringMat = useRef<THREE.PointsMaterial>(null);
   const halo = useRef<THREE.Mesh>(null);
   const haloMat = useRef<THREE.MeshBasicMaterial>(null);
   const label = useRef<THREE.Group>(null);
@@ -218,16 +353,17 @@ function Gate({
     if (ringMat.current) {
       ringMat.current.opacity = damp(
         ringMat.current.opacity,
-        built * (0.42 + active * 0.58),
+        built * (0.58 + active * 0.42),
         4,
         dt,
       );
     }
     if (ring.current) {
-      const s = 0.55 + built * 0.45;
+      const s = 0.62 + built * 0.38;
       ring.current.scale.setScalar(damp(ring.current.scale.x, s, 3.5, dt));
-      // In-plane: a seal turning. On any other axis it tumbles edge-on again.
-      if (!reduced) ring.current.rotation.z = state.clock.elapsedTime * 0.12;
+      // A logo does not spin. The ring this replaced could turn like a seal;
+      // a wordmark turned even a little stops being readable, which is the
+      // same rule the home page's logotype and figure both follow.
     }
 
     // A slow breath while the gate holds the frame, so a beat you dwell on is
@@ -259,39 +395,60 @@ function Gate({
 
   return (
     <group position={[x, LANE_Y, 0]}>
-      {/* Left in the XY plane, facing the camera.
+      {/* Square to the camera, like everything else on this lane.
 
-          It was first turned a quarter about Y so it stood *across* the lane,
-          facing the oncoming traffic — which is right in plan and useless on
-          screen: the camera watches this lane side-on, so a gate square to the
-          traffic is seen edge-on and reads as a bar. A ring you can see
-          through only reads as a gate when it is facing you. */}
-      <mesh ref={ring} scale={0.001}>
-        <torusGeometry args={[GATE_R, 0.055, 10, 72]} />
-        <meshBasicMaterial ref={ringMat} color={a.color} transparent opacity={0} />
-      </mesh>
+          The gate was a torus turned a quarter about Y so it stood *across*
+          the lane facing the traffic — right in plan and useless on screen,
+          since the camera watches the lane side-on and an edge-on ring reads
+          as a bar. It faced the camera after that, and was still a ring: a
+          diagram of a gate rather than a statement about who is behind it. */}
+      {cloud && (
+        <points ref={ring} geometry={cloud.geometry} scale={0.001}>
+          <pointsMaterial
+            ref={ringMat}
+            size={0.052}
+            vertexColors
+            transparent
+            opacity={0}
+            sizeAttenuation
+            depthWrite={false}
+          />
+        </points>
+      )}
 
+      {/* A wash behind the mark, so it sits on something rather than floating
+          in the middle of an empty lane. */}
       <mesh ref={halo}>
-        <circleGeometry args={[GATE_R * 0.97, 48]} />
+        <circleGeometry
+          args={[cloud ? Math.max(cloud.halfW, cloud.halfH) * 1.25 : GATE_R * 1.15, 48]}
+        />
         <meshBasicMaterial ref={haloMat} color={a.color} transparent opacity={0} />
       </mesh>
 
+      {/* The caption sits *under* a mark and *over* a name.
+
+          Where the logo is drawn it already says who this is, so repeating the
+          name in type beside it is the same word twice — only the subject is
+          worth adding. Where there is no mark yet, the name has to carry the
+          gate on its own. */}
       <group ref={label} scale={0.001}>
-        <Billboard position={[0, GATE_R + 0.72, 0]}>
+        <Billboard position={[0, cloud ? -(markHalf + 0.62) : GATE_R + 0.72, 0]}>
+          {!cloud && (
+            <Text
+              fontSize={0.46}
+              color={a.color}
+              anchorX="center"
+              anchorY="middle"
+              font={arabicFontUrl(locale)}
+              letterSpacing={locale === "ar" ? 0 : 0.06}
+              outlineWidth={0.012}
+              outlineColor={SCENE.outline}
+            >
+              {displayCase(authorityName(locale, a.id), locale)}
+            </Text>
+          )}
           <Text
-            fontSize={0.46}
-            color={a.color}
-            anchorX="center"
-            anchorY="middle"
-            font={arabicFontUrl(locale)}
-            letterSpacing={locale === "ar" ? 0 : 0.06}
-            outlineWidth={0.012}
-            outlineColor={SCENE.outline}
-          >
-            {displayCase(authorityName(locale, a.id), locale)}
-          </Text>
-          <Text
-            position={[0, -0.44, 0]}
+            position={[0, cloud ? 0 : -0.44, 0]}
             fontSize={0.2}
             color={SCENE.base}
             anchorX="center"
@@ -333,7 +490,11 @@ function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
        few units down the lane, so the hub is still in frame and lands right
        under the copy column. */
     const stepped = beat(p, firstGate - 0.08, firstGate + 0.02);
-    const quiet = 1 - stepped * 0.62;
+    // At 0.62 this left the hub at 28% opacity — still a wireframe sphere
+    // sitting squarely behind the first gate's copy column, because the camera
+    // is only a couple of units down the lane at that point and the hub has
+    // not gone off-frame yet. It has to be all but gone, not merely dimmer.
+    const quiet = 1 - stepped * 0.9;
 
     if (mat.current) {
       mat.current.opacity = damp(mat.current.opacity, shown * 0.75 * quiet, 3, dt);
@@ -343,9 +504,16 @@ function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
       if (!reduced) core.current.rotation.y = state.clock.elapsedTime * 0.22;
     }
     if (label.current) {
-      // The label goes entirely: a dim ring behind a headline is texture, but
-      // dim *words* behind a headline are just two things to read at once.
-      const vis = shown * (1 - stepped);
+      /* The label goes entirely: a dim ring behind a headline is texture, but
+         dim *words* behind a headline are just two things to read at once.
+
+         It is also absent for the *opening* beat, whose copy is centred — the
+         label sits 1.85 above the hub and landed straight on the hero
+         headline, two pieces of display type in the same place. It arrives at
+         `why`, which is the first beat with a side to it. */
+      const [whyFrom] = rangeOf("why");
+      const named = beat(p, whyFrom - 0.05, whyFrom + 0.02);
+      const vis = shown * named * (1 - stepped);
       label.current.scale.setScalar(damp(label.current.scale.x, Math.max(vis, 0.001), 4, dt));
     }
   });
@@ -424,6 +592,18 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
      * paragraph, which the whole lane can sit under.
      */
     const wide = beat(p, moreFrom - 0.05, moreFrom + 0.04);
+
+    /**
+     * The opening beat is centred copy, so the lane has to leave the middle of
+     * the frame entirely rather than sit behind the headline.
+     *
+     * It drops to the lower third — a pure vertical pan, camera and target
+     * lifted by the same amount, so the viewing angle does not change and the
+     * lane simply sits lower. Tilting instead would have foreshortened the
+     * gates just as the page is trying to introduce them.
+     */
+    const opening = 1 - beat(p, whyFrom - 0.06, whyFrom + 0.02);
+    const lift = opening * 3.4;
     /** Past the gates but not yet pulled back: `how` holds the last one. */
     const tail = beat(p, howFrom - 0.05, howFrom + 0.03);
 
@@ -450,14 +630,16 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     targetX += side * push * (1 - wide) * 2.1;
 
     const dist = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(11.5, 8.6, push),
+      THREE.MathUtils.lerp(THREE.MathUtils.lerp(11.5, 14.5, opening), 8.6, push),
       26,
       wide,
     );
     const high = THREE.MathUtils.lerp(1.1, 2.2, wide);
 
     let cx = targetX;
-    let cy = high;
+    // Camera and look target take the same lift, which is what makes the
+    // opening a pan rather than a tilt.
+    let cy = high + lift;
     if (!reduced) {
       pointer.current.x = damp(pointer.current.x, state.pointer.x, 2.2, dt);
       pointer.current.y = damp(pointer.current.y, state.pointer.y, 2.2, dt);
@@ -472,7 +654,11 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     // Square to the lane: look straight down -Z from wherever we are.
     // Raising the look point drops the lane in frame — at the pull-back that
     // is what keeps three gates and their labels clear of the closing copy.
-    look.current.set(camera.position.x, LANE_Y + high * 0.25 + wide * 4.3, 0);
+    look.current.set(
+      camera.position.x,
+      LANE_Y + high * 0.25 + wide * 4.3 + lift,
+      0,
+    );
     camera.lookAt(look.current);
   });
 
