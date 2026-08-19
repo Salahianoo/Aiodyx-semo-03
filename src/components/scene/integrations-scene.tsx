@@ -14,6 +14,12 @@ import {
   authoritySubject,
   gateX,
 } from "@/lib/integrations-story";
+import {
+  BRAND_NAVY,
+  WORDMARK_LETTER_PATHS,
+  WORDMARK_MONOGRAM_PATHS,
+  WORDMARK_VIEWBOX,
+} from "@/components/brand";
 import { AUTHORITY_MARKS, type AuthorityMark } from "@/lib/authority-marks";
 import { rasterize } from "@/lib/raster";
 import { arabicFontUrl, displayCase } from "@/lib/fonts";
@@ -43,9 +49,34 @@ import { ACCENT, PEAK, SCENE } from "@/lib/theme";
 const GATE_R = 1.62;
 const LANE_Y = 0;
 
-/** How wide an authority's mark stands on the lane, after fitting. */
-const MARK_W = 4.6;
-const MARK_POINTS = 2800;
+/**
+ * The box a mark is fitted into, rather than a width to stretch it to.
+ *
+ * Fitting by width alone works for a wordmark and fails for a symbol: GOSI is
+ * two and a half times wider than it is tall and wants the width, while
+ * ZATCA's shield is nearly square, so the same width made it 4.6 units tall in
+ * a frame 5.9 units high — it overflowed the viewport and stopped reading as a
+ * shield at all. Contain-fit lets one rule serve both shapes.
+ */
+const MARK_BOX_W = 4.8;
+const MARK_BOX_H = 2.5;
+const MARK_POINTS = 3800;
+
+/**
+ * Our own end of the lane, described the same way the authorities are.
+ *
+ * The hub was a wireframe icosahedron — an abstraction standing where three
+ * real logos stand, which made the near end of the lane the one place the page
+ * did not say who it meant. It is the AIODYX mark now, split the way the SVG
+ * colours it: navy monogram, ink letters.
+ */
+const AIODYX_MARK: AuthorityMark = {
+  viewBox: WORDMARK_VIEWBOX,
+  emblem: WORDMARK_MONOGRAM_PATHS,
+  word: WORDMARK_LETTER_PATHS,
+  gradient: [BRAND_NAVY],
+  wordColor: SCENE.base,
+};
 
 /** A built mark, and the box it actually occupies. */
 type MarkCloud = {
@@ -112,11 +143,13 @@ function buildMark(mark: AuthorityMark): MarkCloud | null {
 
   const cx = (lo + hi) / 2;
   const cy = (bot + top) / 2;
-  // One scale for both axes, applied after the aspect correction, so the mark
-  // is fitted rather than stretched.
-  const k = MARK_W / Math.max(hi - lo, 1e-6);
-  const halfW = ((hi - lo) * k) / 2;
-  const halfH = ((top - bot) * aspect * k) / 2;
+  // One scale for both axes — the smaller of the two fits — so the mark is
+  // contained rather than stretched or cropped.
+  const srcW = Math.max(hi - lo, 1e-6);
+  const srcH = Math.max((top - bot) * aspect, 1e-6);
+  const k = Math.min(MARK_BOX_W / srcW, MARK_BOX_H / srcH);
+  const halfW = (srcW * k) / 2;
+  const halfH = (srcH * k) / 2;
 
   const stops = mark.gradient.map((c) => new THREE.Color(c));
   const wordCol = new THREE.Color(mark.wordColor);
@@ -336,8 +369,6 @@ function Gate({
 
   const ring = useRef<THREE.Points>(null);
   const ringMat = useRef<THREE.PointsMaterial>(null);
-  const halo = useRef<THREE.Mesh>(null);
-  const haloMat = useRef<THREE.MeshBasicMaterial>(null);
   const label = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
@@ -359,26 +390,19 @@ function Gate({
       );
     }
     if (ring.current) {
-      const s = 0.62 + built * 0.38;
-      ring.current.scale.setScalar(damp(ring.current.scale.x, s, 3.5, dt));
-      // A logo does not spin. The ring this replaced could turn like a seal;
-      // a wordmark turned even a little stops being readable, which is the
-      // same rule the home page's logotype and figure both follow.
-    }
+      /* A logo does not spin. The ring this replaced could turn like a seal;
+         a wordmark turned even a little stops being readable, which is the
+         same rule the home page's logotype and figure both follow.
 
-    // A slow breath while the gate holds the frame, so a beat you dwell on is
-    // not a photograph.
-    if (haloMat.current) {
-      const pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(state.clock.elapsedTime * 1.1);
-      haloMat.current.opacity = damp(
-        haloMat.current.opacity,
-        active * (0.06 + pulse * 0.06),
-        3,
-        dt,
-      );
-    }
-    if (halo.current) {
-      halo.current.scale.setScalar(damp(halo.current.scale.x, 1 + active * 0.22, 3, dt));
+         The breath used to live on a tinted disc behind the mark. With the
+         disc gone it moved here — a fraction of a percent of scale, which is
+         enough that a beat you dwell on is not a photograph, and far too
+         little to blur the letterforms the way a positional drift would. */
+      const breath = reduced
+        ? 0
+        : Math.sin(state.clock.elapsedTime * 1.1) * 0.012 * active;
+      const s = 0.62 + built * 0.38 + breath;
+      ring.current.scale.setScalar(damp(ring.current.scale.x, s, 3.5, dt));
     }
 
     if (label.current) {
@@ -416,14 +440,10 @@ function Gate({
         </points>
       )}
 
-      {/* A wash behind the mark, so it sits on something rather than floating
-          in the middle of an empty lane. */}
-      <mesh ref={halo}>
-        <circleGeometry
-          args={[cloud ? Math.max(cloud.halfW, cloud.halfH) * 1.25 : GATE_R * 1.15, 48]}
-        />
-        <meshBasicMaterial ref={haloMat} color={a.color} transparent opacity={0} />
-      </mesh>
+      {/* No wash behind the mark. A tinted disc scaled to the logo filled half
+          the frame and turned the page's own ground a different colour on every
+          gate — and nothing else on this site puts a panel behind its subject.
+          The mark stands on the page, like the copy does. */}
 
       {/* The caption sits *under* a mark and *over* a name.
 
@@ -470,8 +490,9 @@ function Gate({
 
 /** Your system. One object, at the near end, where every document starts. */
 function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
-  const core = useRef<THREE.Mesh>(null);
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const cloud = useMemo(() => buildMark(AIODYX_MARK), []);
+  const core = useRef<THREE.Points>(null);
+  const mat = useRef<THREE.PointsMaterial>(null);
   const label = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
@@ -497,11 +518,17 @@ function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     const quiet = 1 - stepped * 0.9;
 
     if (mat.current) {
-      mat.current.opacity = damp(mat.current.opacity, shown * 0.75 * quiet, 3, dt);
+      mat.current.opacity = damp(mat.current.opacity, shown * 0.95 * quiet, 3, dt);
     }
     if (core.current) {
-      core.current.scale.setScalar(damp(core.current.scale.x, Math.max(shown, 0.001), 3, dt));
-      if (!reduced) core.current.rotation.y = state.clock.elapsedTime * 0.22;
+      /* The sphere this replaced turned on Y. A wordmark cannot: a logotype
+         rotated even a little stops being readable, which is the rule the
+         gates' marks and the home page's logotype both follow. The life comes
+         from a breath in scale instead. */
+      const breath = reduced ? 0 : Math.sin(state.clock.elapsedTime * 0.9) * 0.01;
+      core.current.scale.setScalar(
+        damp(core.current.scale.x, Math.max(shown + breath, 0.001), 3, dt),
+      );
     }
     if (label.current) {
       /* The label goes entirely: a dim ring behind a headline is texture, but
@@ -520,12 +547,24 @@ function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
 
   return (
     <group position={[HUB_X, LANE_Y, 0]}>
-      <mesh ref={core} scale={0.001}>
-        <icosahedronGeometry args={[1.15, 1]} />
-        <meshBasicMaterial ref={mat} color={SCENE.draft} transparent opacity={0} wireframe />
-      </mesh>
+      {cloud && (
+        <points ref={core} geometry={cloud.geometry} scale={0.001}>
+          <pointsMaterial
+            ref={mat}
+            size={0.052}
+            vertexColors
+            transparent
+            opacity={0}
+            sizeAttenuation
+            depthWrite={false}
+          />
+        </points>
+      )}
+      {/* Under the mark, like every gate caption — the logo says who, the
+          caption says what it is. Above the mark it landed on the hero
+          headline, which is centred copy on the opening beat. */}
       <group ref={label} scale={0.001}>
-        <Billboard position={[0, 1.85, 0]}>
+        <Billboard position={[0, -((cloud?.halfH ?? 0) + 0.62), 0]}>
           <Text
             fontSize={0.34}
             color={SCENE.base}
@@ -603,7 +642,12 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
      * gates just as the page is trying to introduce them.
      */
     const opening = 1 - beat(p, whyFrom - 0.06, whyFrom + 0.02);
-    const lift = opening * 3.4;
+    /* 4.6, and the pull-back to 17 that goes with it, are one decision. At
+       11.5 the frame is only ~10 units tall, and no lift both clears the
+       subtitle's last line and keeps the hub off the bottom edge — it is a
+       2.3-unit sphere and there is not room for it. Further back buys the
+       margin the drop needs. */
+    const lift = opening * 4.6;
     /** Past the gates but not yet pulled back: `how` holds the last one. */
     const tail = beat(p, howFrom - 0.05, howFrom + 0.03);
 
@@ -630,7 +674,7 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     targetX += side * push * (1 - wide) * 2.1;
 
     const dist = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(THREE.MathUtils.lerp(11.5, 14.5, opening), 8.6, push),
+      THREE.MathUtils.lerp(THREE.MathUtils.lerp(11.5, 17, opening), 8.6, push),
       26,
       wide,
     );
