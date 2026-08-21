@@ -24,6 +24,8 @@ import {
   ODOO_PLAIN_PATHS,
   ODOO_VIEWBOX,
 } from "@/lib/odoo-mark";
+import type { AuthorityMark } from "@/lib/authority-marks";
+import { MARK_DOT, buildMark } from "@/lib/mark-cloud";
 import { rasterize, shuffle, type MarkSample } from "@/lib/raster";
 import { buildBeats, MODULES, moduleBeatOffset, moduleCopy } from "@/lib/story";
 import {
@@ -103,7 +105,12 @@ const HUB_MARK_Y = 0.66;
 // Two thirds of AIODYX rather than under half. At 1.9 the two marks read as a
 // logo and a footnote instead of a lockup, and "odoo" is four letters inside
 // what was 125 screen pixels.
-const HUB_ODOO_W = 2.4;
+//
+// Widened again with `HUB_TAKE`. "odoo" is three closed rings and a bowl, and
+// a counter only survives if it is wider than the points drawing its edges —
+// past a certain density the extra ink lands *inside* the letters and four
+// crisp glyphs become one dark bar. Bolder had to mean bigger too.
+const HUB_ODOO_W = 3;
 const HUB_ODOO_Y = -0.72;
 const HUB_RULE_Y = -0.06;
 const HUB_RULE_W = 0.8;
@@ -134,12 +141,35 @@ const HUB = { none: 0, letters: 1, monogram: 2, odooA: 3, odooB: 4 } as const;
  * middle has to clear a copy block that is far wider than it is tall — a
  * circle big enough to clear it sideways runs off the top of the frame.
  *
- * Six glyphs at 60° steps means none of them lands at twelve or six o'clock,
- * which is where the headline and the trust line reach furthest.
+ * Six glyphs at 60° steps means none of them lands at twelve or six o'clock —
+ * which is exactly where the two wordmarks go instead. Twelve and six are the
+ * two stations a *glyph* cannot use, because the headline and the trust line
+ * reach furthest there and a 2.9-unit square would sit on them; a wordmark is
+ * a fifth of that tall and drops into the band each one leaves clear.
  */
 const ICON_RX = 9.9;
 const ICON_RY = 5.4;
 const ICON_SIZE = 2.9;
+
+
+/**
+ * The two marks on the ring: AIODYX at the top, Odoo at the bottom.
+ *
+ * The opening frame said "ERP" six times over and never said who by. A visitor
+ * arriving here should be able to answer *what is this company* and *what does
+ * it build on* without reading a word, and these are the two facts the page
+ * spends the rest of its length earning.
+ *
+ * Drawn by `buildMark`, the same function the integrations page uses for every
+ * logo on it, in its own points object rather than out of the field. They were
+ * built from the field first — twelve thousand shared particles, so the marks
+ * could travel into the hub of the assembly ring — and that is a nice property
+ * that cost the thing it was in aid of: a logotype is thin strokes, and at a
+ * point size chosen for compact glyphs the counters of the O and the D filled
+ * in. Every lever that fixed one (more points, bigger points, wider marks)
+ * broke another. The marks are marks now, drawn the way marks are drawn here.
+ */
+const ODOO_SCALE = 0.62;
 
 /**
  * Where the six glyphs go once the ring breaks apart, and how they tumble.
@@ -276,6 +306,17 @@ function formationOf(id: string) {
 // a held screen has pixels to land on, which is the tightest detail any of the
 // ten has to carry.
 const DISTANCE = [20.0, 14.5, 11.5, 17.8, 12.6, 12.2, 12.7, 11.0];
+
+/**
+ * The dot size the ring marks are drawn at, scaled for this camera.
+ *
+ * `MARK_DOT` is tuned against the integrations page, whose close beats stand
+ * about thirteen units back. `sizeAttenuation` divides by camera distance, so
+ * lifting the same number straight over to the formation furthest out gives a
+ * mark two thirds the weight of the one it is meant to match. This is the same
+ * dot, at this distance.
+ */
+const ICON_MARK_DOT = MARK_DOT * (DISTANCE[ICONS] / 13);
 /** And how high it rides. */
 // Lifted toward the ledger, since the origin sits at hip height.
 // Near zero for the icons: they are flat glyphs and a raised camera
@@ -380,6 +421,30 @@ function odooSample(rand: () => number): MarkSample {
   };
 }
 
+/**
+ * The two marks, described the way every logo in this codebase is described.
+ *
+ * `aiodyxSample` and `odooSample` above still exist for the field — the hub
+ * lockup of the assembly ring is built out of the same twelve thousand points
+ * as everything else and always will be. These are for the ring, where the
+ * mark has to be a mark.
+ */
+const AIODYX_MARK: AuthorityMark = {
+  viewBox: WORDMARK_VIEWBOX,
+  emblem: WORDMARK_MONOGRAM_PATHS,
+  word: WORDMARK_LETTER_PATHS,
+  gradient: [BRAND_NAVY],
+  wordColor: SCENE.base,
+};
+
+const ODOO_MARK: AuthorityMark = {
+  viewBox: ODOO_VIEWBOX,
+  emblem: ODOO_ACCENT_PATHS,
+  word: ODOO_PLAIN_PATHS,
+  gradient: [ODOO_MAGENTA],
+  wordColor: ODOO_NEUTRAL,
+};
+
 type Field = {
   geometry: THREE.BufferGeometry;
   moduleTex: THREE.DataTexture;
@@ -434,11 +499,65 @@ function buildField(): Field {
   const v = new THREE.Vector3();
   const g2 = { x: 0, y: 0 };
 
+  /**
+   * One draw, used by two formations.
+   *
+   * A point that belongs to the lockup has to land on the *same letterform* on
+   * the opening ring and in the hub of the assembly ring, or the mark does not
+   * travel between them — it dissolves and a different one fades up. Sampling
+   * once here and letting both formations place it is what makes those two
+   * moments the same object seen twice.
+   */
+  type BrandPoint = {
+    /** Which of the two marks this point draws. */
+    odoo: boolean;
+    /** Where in that mark, in its own ±0.5 box. */
+    x: number;
+    y: number;
+    band: number;
+    /** Belongs to the rule under the hub lockup, which only the hub draws. */
+    rule: boolean;
+  };
+  const drawBrand = (): BrandPoint => {
+    const which = rand();
+    /* The rule between the two marks has no place on a ring where they stand
+       at opposite ends, so on the opening ring those points are simply part of
+       "odoo" — they already wear its neutral. They step out into the rule when
+       the hub forms. */
+    const rule = which < 0.04;
+    const odooSide = which < 0.34;
+    const src = odooSide ? odoo : aiodyx;
+    // Sampled by area within each mark, so the accent letters do not come out
+    // denser than the neutral ones beside them.
+    const total = src.accent.length + src.plain.length;
+    const useA = !rule && total > 0 && rand() * total < src.accent.length;
+    const list = useA ? src.accent : src.plain;
+    const [mx, my] = list.length ? list[Math.floor(rand() * list.length)] : [0, 0];
+    return {
+      odoo: odooSide,
+      x: mx,
+      y: my,
+      rule,
+      band: odooSide
+        ? useA
+          ? HUB.odooA
+          : HUB.odooB
+        : useA
+          ? HUB.monogram
+          : HUB.letters,
+    };
+  };
+
   for (let i = 0; i < COUNT; i++) {
     const c = i % CLUSTERS;
     cluster[i] = c;
     seed[i] = rand();
     const k = i * 3;
+
+    /* Decided before anything is placed: the ICONS ring and the RING hub both
+       need it, and they are written a hundred lines apart. */
+    const brand = isHub(i) ? drawBrand() : null;
+    if (brand) hub[i] = brand.band;
 
     /* 0 — ICONS: six ERP glyphs on a wide ring, hero copy in the hub. Each
        glyph is authored flat in a ±0.5 box and placed here, so none of the
@@ -499,35 +618,21 @@ function buildField(): Field {
        seventh of the field stays on the ring itself, so the modules read as
        joined rather than as ten separate clouds. */
     const node = nodes[c];
-    if (isHub(i)) {
-      // The signature in the hole. Sampled by area within each mark so the
-      // monogram, which is two glyphs of six, does not come out three times
-      // denser than the letters beside it.
-      const band = rand();
-      if (band < 0.04) {
+    if (brand) {
+      /* The signature in the hole — the same two marks that opened the page,
+         come in off the ring and stacked into one lockup. Each point is on the
+         letterform it was already on; only the placement changes. */
+      if (brand.rule) {
         // A rule between the two marks. Stacked bare they read as two
         // unrelated logos; this makes it one "X, built on Y" lockup.
         pos[RING][k] = (rand() - 0.5) * HUB_RULE_W;
         pos[RING][k + 1] = HUB_RULE_Y + (rand() - 0.5) * HUB_RULE_T;
-        hub[i] = HUB.odooB;
-      } else if (band < 0.34) {
-        // Sampled by area within each mark, so the accent letter does not come
-        // out denser than the neutral ones beside it.
-        const total = odoo.accent.length + odoo.plain.length;
-        const useA = total > 0 && rand() * total < odoo.accent.length;
-        const src = useA ? odoo.accent : odoo.plain;
-        const [mx, my] = src.length ? src[Math.floor(rand() * src.length)] : [0, 0];
-        pos[RING][k] = mx * HUB_ODOO_W;
-        pos[RING][k + 1] = HUB_ODOO_Y + my * HUB_ODOO_W * odoo.aspect;
-        hub[i] = useA ? HUB.odooA : HUB.odooB;
+      } else if (brand.odoo) {
+        pos[RING][k] = brand.x * HUB_ODOO_W;
+        pos[RING][k + 1] = HUB_ODOO_Y + brand.y * HUB_ODOO_W * odoo.aspect;
       } else {
-        const total = aiodyx.accent.length + aiodyx.plain.length;
-        const useA = total > 0 && rand() * total < aiodyx.accent.length;
-        const src = useA ? aiodyx.accent : aiodyx.plain;
-        const [mx, my] = src.length ? src[Math.floor(rand() * src.length)] : [0, 0];
-        pos[RING][k] = mx * HUB_MARK_W;
-        pos[RING][k + 1] = HUB_MARK_Y + my * HUB_MARK_W * aiodyx.aspect;
-        hub[i] = useA ? HUB.monogram : HUB.letters;
+        pos[RING][k] = brand.x * HUB_MARK_W;
+        pos[RING][k + 1] = HUB_MARK_Y + brand.y * HUB_MARK_W * aiodyx.aspect;
       }
       pos[RING][k + 2] = gauss() * 0.1;
     } else if (i % 7 === 0) {
@@ -904,8 +1009,8 @@ const MATERIAL = new THREE.ShaderMaterial({
       ) * (1.0 - hub);
       vec3 col = mix(uBase, uCluster[int(aCluster)], hueAmt);
 
-      // Only while the ring holds the frame. Everywhere else these are
-      // ordinary points and take whatever their formation is wearing.
+      // Only while the assembly ring holds the frame. Everywhere else these
+      // are ordinary points and take whatever their formation is wearing.
       vec3 hubCol =
           aHub < 1.5 ? uBase
         : aHub < 2.5 ? uBrand
@@ -1360,11 +1465,83 @@ function Field({ reduced, locale }: SceneEnv) {
   );
 }
 
+/**
+ * AIODYX at twelve o'clock and Odoo at six, on the opening ring.
+ *
+ * Outside `<Field>`'s group on purpose: that group rolls during the module
+ * tour to bring the active cluster to the top, and a logotype turned even a
+ * little stops being readable — the same rule the finale logotype and the
+ * integrations gates both follow.
+ *
+ * The two are one lockup split across the ring, so Odoo is drawn at the ratio
+ * the integrations hub uses rather than fitted to the mark box in its own
+ * right: ours is the name, theirs is the platform underneath it. The dot size
+ * is divided back out, so scaling the mark does not also shrink its grain.
+ */
+function RingMarks() {
+  const brand = useMemo(() => buildMark(AIODYX_MARK), []);
+  const odoo = useMemo(() => buildMark(ODOO_MARK), []);
+  const brandMat = useRef<THREE.PointsMaterial>(null);
+  const odooMat = useRef<THREE.PointsMaterial>(null);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 1 / 30);
+    // Held by the opening formation and gone with it, on the same weight as
+    // everything else in the scene — so the marks cannot lag the field they
+    // stand in, however fast the timeline is dragged.
+    const on = UNIFORMS.uW.value[ICONS];
+    if (brandMat.current) {
+      brandMat.current.opacity = damp(brandMat.current.opacity, on * 0.95, 4, dt);
+      brandMat.current.visible = brandMat.current.opacity > 0.01;
+    }
+    if (odooMat.current) {
+      odooMat.current.opacity = damp(odooMat.current.opacity, on * 0.9, 4, dt);
+      odooMat.current.visible = odooMat.current.opacity > 0.01;
+    }
+  });
+
+  return (
+    <>
+      {brand && (
+        <points geometry={brand.geometry} position={[0, ICON_RY, 0]}>
+          <pointsMaterial
+            ref={brandMat}
+            size={ICON_MARK_DOT}
+            vertexColors
+            transparent
+            opacity={0}
+            sizeAttenuation
+            depthWrite={false}
+          />
+        </points>
+      )}
+      {odoo && (
+        <points
+          geometry={odoo.geometry}
+          position={[0, -ICON_RY, 0]}
+          scale={ODOO_SCALE}
+        >
+          <pointsMaterial
+            ref={odooMat}
+            size={ICON_MARK_DOT / ODOO_SCALE}
+            vertexColors
+            transparent
+            opacity={0}
+            sizeAttenuation
+            depthWrite={false}
+          />
+        </points>
+      )}
+    </>
+  );
+}
+
 export function HomeScene(env: SceneEnv) {
   return (
     <>
       <Starfield reduced={env.reduced} />
       <Field {...env} />
+      <RingMarks />
     </>
   );
 }

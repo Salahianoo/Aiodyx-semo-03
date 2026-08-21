@@ -7,30 +7,62 @@ import type { Beat, BeatItem } from "@/lib/story";
  *
  * Identity and geometry only — names and descriptions are looked up per
  * locale, for the same reason `ModuleDef` in story.ts keeps its labels out:
- * the scene imports this for lane positions, and a translated label would
+ * the scene imports this for ring positions, and a translated label would
  * rebuild the geometry every time the language changed.
  *
  * Ordered as the page walks them, which is also the order a document meets
- * them in a company's month: invoice out, wages filed, contracts kept.
+ * them in a company's month: invoice out, wages filed, contracts kept. Each
+ * platform's hue is its own, deepened for a light ground: ZATCA's shield-teal,
+ * GOSI's green, QIWA's orange. The documents coming back down a spoke are the
+ * colour of the mark that stamped them.
  */
 export const AUTHORITIES = [
-  { id: "zatca", color: "#0E7490" },
-  { id: "gosi", color: "#047857" },
-  { id: "qiwa", color: "#1D4ED8" },
+  // Angles, not lane positions: see `authorityPos`. Spaced 120° apart, with
+  // the first at the top, so the three stand as a triangle about the hub and
+  // none of them sits directly under it where the Odoo mark hangs.
+  { id: "zatca", color: "#0E7490", angle: 90 },
+  { id: "gosi", color: "#047857", angle: 210 },
+  { id: "qiwa", color: "#B45309", angle: 330 },
 ] as const;
 
 export type AuthorityId = (typeof AUTHORITIES)[number]["id"];
 
-/** Spacing of the gates down the lane. The camera tracks +X across them. */
-export const GATE_GAP = 8.4;
+/**
+ * The ring the platforms stand on, around your own system at the centre.
+ *
+ * An ellipse rather than a circle. On a circle wide enough to keep three marks
+ * off each other, the top one climbs as far above the hub as the side ones sit
+ * out from it — and a browser frame is half again as wide as it is tall, so
+ * that spends height the page does not have and leaves the sides empty. Wider
+ * than tall, the same clearance costs a frame the shape of the screen.
+ */
+export const RING_RX = 8;
+/**
+ * Taller than the frame alone would ask for, because of the top platform.
+ *
+ * At 4.8 the vertical run from the hub to ZATCA was 4.5 units and the two
+ * lockups facing each other across it wanted more than that between them — the
+ * spoke came out a negative length and simply was not drawn, so the one
+ * platform standing straight above your system had no visible connection to
+ * it. The ring has to be at least as big as the things standing on it.
+ */
+export const RING_RY = 6.6;
 
-/** The hub sits behind the first gate, so the lane starts before it does. */
-export const HUB_X = -4.6;
+/** Where a platform stands, in the plane the camera faces. */
+export const authorityPos = (i: number): [number, number] => {
+  const a = (AUTHORITIES[i].angle * Math.PI) / 180;
+  return [RING_RX * Math.cos(a), RING_RY * Math.sin(a)];
+};
 
-export const gateX = (i: number) => i * GATE_GAP;
+/** The middle of the hub's stack — the AIODYX mark with Odoo under it. */
+export const HUB_MID_Y = 0.3;
 
-/** Far end of the conduit, past the last gate. */
-export const LANE_END = gateX(AUTHORITIES.length - 1) + 4.6;
+/**
+ * The middle of the whole constellation, which is not the middle of the ring:
+ * the top platform reaches further above the hub than the lower two reach
+ * below it, because their captions hang under them and its does not.
+ */
+export const FIELD_MID_Y = 1.4;
 
 /** An authority's short name, for the 3D gate label. */
 export const authorityName = (locale: Locale, id: string) =>

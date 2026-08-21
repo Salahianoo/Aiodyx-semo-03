@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -8,11 +8,12 @@ import * as THREE from "three";
 import type { SceneEnv } from "@/components/story-page";
 import {
   AUTHORITIES,
-  HUB_X,
-  LANE_END,
+  FIELD_MID_Y,
+  RING_RX,
+  HUB_MID_Y,
   authorityName,
+  authorityPos,
   authoritySubject,
-  gateX,
 } from "@/lib/integrations-story";
 import {
   BRAND_NAVY,
@@ -21,46 +22,66 @@ import {
   WORDMARK_VIEWBOX,
 } from "@/components/brand";
 import { AUTHORITY_MARKS, type AuthorityMark } from "@/lib/authority-marks";
-import { rasterize } from "@/lib/raster";
+import { MARK_BOX_H, MARK_BOX_W, MARK_DOT, buildMark } from "@/lib/mark-cloud";
+import {
+  ODOO_ACCENT_PATHS,
+  ODOO_MAGENTA,
+  ODOO_NEUTRAL,
+  ODOO_PLAIN_PATHS,
+  ODOO_VIEWBOX,
+} from "@/lib/odoo-mark";
 import { arabicFontUrl, displayCase } from "@/lib/fonts";
 import type { Locale } from "@/lib/i18n";
 import { isRtl } from "@/lib/i18n";
 import { beat, clamp, damp, owns, rangeOf, scroll } from "@/lib/scroll";
-import { ACCENT, PEAK, SCENE } from "@/lib/theme";
+import { SCENE } from "@/lib/theme";
 
 /**
- * A clearing lane: your system at one end, three national platforms down it,
- * and documents crossing between them.
+ * A hub and three spokes: your own system at the centre, the three national
+ * platforms standing around it, and documents crossing between them.
  *
- * The page is about things *leaving* a system and coming back approved, so the
- * scene is the only one here with two places in it. Home has one field that
- * becomes everything; services builds a single rig; about turns one globe.
- * This has a near side and a far side, and the whole subject is the traffic in
- * between — which is why the camera tracks sideways along the lane rather than
- * flying into it: travelling *down* a channel puts the viewer inside the pipe,
- * and you cannot see a handshake from inside the wire.
+ * It was a lane before — hub at one end, platforms strung out along it — which
+ * drew the right traffic and the wrong shape. A queue says the platforms come
+ * one after another and that the last one is furthest away, and neither is
+ * true: a company files with all three, from one system, in the same month.
+ * Around the hub they are what they are — three directions out of one place,
+ * none of them further than the others.
  *
- * Nothing here depicts the authorities' own marks. Those are trademarks with
- * their own usage rules, and a logo rebuilt as a point cloud is a redrawing of
- * it — the gates carry the names as text, which is what a statement of
- * integration actually needs.
+ * The camera never yaws. It pans across the plane the ring is drawn in and
+ * dollies, so world X stays screen X and a platform can be parked opposite its
+ * own copy column by moving the camera alone.
+ *
+ * Each gate carries the authority's own mark, drawn as points. See
+ * `authority-marks.ts` for why the logo rather than the name in type.
  */
 
 const GATE_R = 1.62;
-const LANE_Y = 0;
 
 /**
- * The box a mark is fitted into, rather than a width to stretch it to.
+ * How much the whole field steps back at the closing beat.
  *
- * Fitting by width alone works for a wordmark and fails for a symbol: GOSI is
- * two and a half times wider than it is tall and wants the width, while
- * ZATCA's shield is nearly square, so the same width made it 4.6 units tall in
- * a frame 5.9 units high — it overflowed the viewport and stopped reading as a
- * shield at all. Contain-fit lets one rule serve both shapes.
+ * `close` is the only beat besides the hero with *centred* copy: a headline,
+ * a line of body and two buttons, straight down the middle. Every other beat
+ * has a side, so the camera can park the picture opposite it; this one has
+ * none, and the ring is symmetric enough that shoving it either way just picks
+ * a different half to sit on.
+ *
+ * So it stops competing instead. The constellation stays whole and centred —
+ * which is the right last image, the system the page just built — and drops to
+ * a watermark behind the ask.
  */
-const MARK_BOX_W = 4.8;
-const MARK_BOX_H = 2.5;
-const MARK_POINTS = 3800;
+const hush = (p: number) => 1 - owns(p, "close", 0.3) * 0.72;
+
+/**
+ * The air between a mark and its caption.
+ *
+ * The caption hangs off the mark's own underside rather than sitting on a line
+ * of its own, so the two read as one lockup. On a shared line instead they sat
+ * neatly level with each other and belonged to nothing — and around a ring
+ * there is no shared line to sit on.
+ */
+const CAPTION_GAP = 0.42;
+
 
 /**
  * Our own end of the lane, described the same way the authorities are.
@@ -78,163 +99,135 @@ const AIODYX_MARK: AuthorityMark = {
   wordColor: SCENE.base,
 };
 
-/** A built mark, and the box it actually occupies. */
-type MarkCloud = {
-  geometry: THREE.BufferGeometry;
-  halfW: number;
-  halfH: number;
+/**
+ * And the system it is all built on, under our own name.
+ *
+ * "Odoo ERP" was set in type here. Every other party in this scene is present
+ * as its own mark, and the one at the centre — the system the whole page is
+ * about connecting — was the only one spelled out. Split the way its file
+ * colours it: the leading "o" magenta, "doo" neutral.
+ */
+const ODOO_MARK: AuthorityMark = {
+  viewBox: ODOO_VIEWBOX,
+  emblem: ODOO_ACCENT_PATHS,
+  word: ODOO_PLAIN_PATHS,
+  gradient: [ODOO_MAGENTA],
+  wordColor: ODOO_NEUTRAL,
 };
 
-/* --------------------------------------------------------- authority marks */
-
 /**
- * An authority's own logo, as a point cloud.
+ * How much smaller Odoo sits than the name above it.
  *
- * The gates were rings — and a ring is a diagram of a gate, not a statement
- * about who is on the other side of it. A visitor recognises the mark of the
- * body they file with long before they read a heading, so the mark *is* the
- * gate.
- *
- * Colour is baked into a vertex attribute rather than resolved in a shader.
- * ZATCA's shield is twenty-four stripes running green through teal to blue,
- * and the gradient is the thing that makes it recognisable; a flat fill would
- * be the mark with its one identifying feature removed. Sampling the gradient
- * by each point's position across the emblem reproduces it with one pass
- * instead of twenty-four.
+ * Both are wide wordmarks, so contain-fit gives them the same width and the
+ * lockup reads as two brands of equal billing. This is our page; the platform
+ * is the subtitle.
  */
-function buildMark(mark: AuthorityMark): MarkCloud | null {
-  const emblem = rasterize(mark.emblem, mark.viewBox, 400, mark.transform);
-  const word = mark.emblemOnly
-    ? []
-    : rasterize(mark.word, mark.viewBox, 400, mark.transform);
-  if (!emblem.length && !word.length) return null;
+const ODOO_SCALE = 0.62;
 
-  // Both halves were rasterised at one width, so they already share a
-  // coordinate system — the wordmark sits where it belongs beside the emblem
-  // rather than being re-fitted to its own bounding box.
-  const aspect = mark.viewBox.h / mark.viewBox.w;
+/** The air between the two marks of the hub's lockup. */
+const HUB_STACK_GAP = 0.34;
 
-  /**
-   * Fitted to what is actually drawn, not to the source viewBox.
-   *
-   * A logo's file is mostly empty space around the artwork, and drawing the
-   * symbol alone leaves the hole where its wordmark used to be. Measuring the
-   * sampled points and fitting those centres the mark and gives it the whole
-   * width, whichever half of the lockup ended up being used.
-   */
-  let lo = Infinity;
-  let hi = -Infinity;
-  let bot = Infinity;
-  let top = -Infinity;
-  for (const [x, y] of emblem) {
-    if (x < lo) lo = x;
-    if (x > hi) hi = x;
-    if (y < bot) bot = y;
-    if (y > top) top = y;
-  }
-  const emblemLo = lo;
-  const emblemSpan = Math.max(hi - lo, 1e-6);
-  for (const [x, y] of word) {
-    if (x < lo) lo = x;
-    if (x > hi) hi = x;
-    if (y < bot) bot = y;
-    if (y > top) top = y;
-  }
 
-  const cx = (lo + hi) / 2;
-  const cy = (bot + top) / 2;
-  // One scale for both axes — the smaller of the two fits — so the mark is
-  // contained rather than stretched or cropped.
-  const srcW = Math.max(hi - lo, 1e-6);
-  const srcH = Math.max((top - bot) * aspect, 1e-6);
-  const k = Math.min(MARK_BOX_W / srcW, MARK_BOX_H / srcH);
-  const halfW = (srcW * k) / 2;
-  const halfH = (srcH * k) / 2;
 
-  const stops = mark.gradient.map((c) => new THREE.Color(c));
-  const wordCol = new THREE.Color(mark.wordColor);
-  const mixed = new THREE.Color();
+/* ---------------------------------------------------------------- spokes */
 
-  const pos = new Float32Array(MARK_POINTS * 3);
-  const col = new Float32Array(MARK_POINTS * 3);
-
-  // Deterministic: the mark must be identical on every load.
-  let seed = 0x9e37;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) % 4294967296;
-    return seed / 4294967296;
-  };
-
-  // Drawn from the two lists concatenated, so density follows ink area and
-  // neither half comes out heavier than it is drawn.
-  const total = emblem.length + word.length;
-  for (let i = 0; i < MARK_POINTS; i++) {
-    const pickIdx = Math.floor(rand() * total);
-    const isEmblem = pickIdx < emblem.length;
-    const [px, py] = isEmblem ? emblem[pickIdx] : word[pickIdx - emblem.length];
-
-    const j = i * 3;
-    pos[j] = (px - cx) * k;
-    // The height carries the aspect, or a mark twice as wide as it is tall
-    // comes out square.
-    pos[j + 1] = (py - cy) * aspect * k;
-    pos[j + 2] = 0;
-
-    if (isEmblem && stops.length > 1) {
-      // Sampled across the *emblem's* own width, not the fitted box, so the
-      // gradient runs the way it was drawn even when a wordmark widens the box.
-      const t = ((px - emblemLo) / emblemSpan) * (stops.length - 1);
-      const a = Math.min(stops.length - 2, Math.max(0, Math.floor(t)));
-      mixed.copy(stops[a]).lerp(stops[a + 1], Math.min(1, Math.max(0, t - a)));
-    } else if (isEmblem) {
-      mixed.copy(stops[0]);
-    } else {
-      mixed.copy(wordCol);
-    }
-    col[j] = mixed.r;
-    col[j + 1] = mixed.g;
-    col[j + 2] = mixed.b;
-  }
-
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  return { geometry: g, halfW, halfH };
-}
-
-/* ------------------------------------------------------------------ lane */
+/** Hub end, gate end and length of one spoke, in the ring's own plane. */
+type Spoke = {
+  from: [number, number];
+  to: [number, number];
+  /** Unit vector, hub → platform. */
+  dir: [number, number];
+  len: number;
+};
 
 /**
- * The conduit, as a dashed run of ticks rather than a solid tube.
+ * How far a lockup reaches in a given direction, as an ellipse through its
+ * corners, plus air.
+ *
+ * A single number cannot do this. The lockups are much wider than they are
+ * tall, so the clearance a spoke needs leaving the hub sideways is more than
+ * twice what it needs leaving straight up — and one figure big enough for the
+ * wide case swallowed the vertical spoke whole. Fitted per direction, every
+ * spoke starts and ends the same distance clear of the artwork.
+ */
+const AIR = 0.45;
+const reach = (dx: number, dy: number, halfW: number, halfH: number) =>
+  1 / Math.hypot(dx / halfW, dy / halfH) + AIR;
+
+/** Half-height of the hub's two-mark stack, measured in `Hub`. */
+const HUB_HALF_H = 1.35;
+/**
+ * A platform's half-height for clearance: the mark's box plus the caption
+ * hanging under it, since a spoke arriving from below meets the caption first.
+ */
+const GATE_HALF_H = MARK_BOX_H / 2 + CAPTION_GAP + 0.16;
+
+/**
+ * The three runs out of the hub, each stopping short at both ends.
+ *
+ * Drawn from the edge of the lockup rather than its centre, and stopping
+ * before the mark it arrives at: a line that touches a logo reads as an arrow
+ * pointing at it, and these are channels, not annotations.
+ */
+const SPOKES: Spoke[] = AUTHORITIES.map((_, i) => {
+  const [gx, gy] = authorityPos(i);
+  const dy = gy - HUB_MID_Y;
+  const mag = Math.hypot(gx, dy) || 1;
+  const dir: [number, number] = [gx / mag, dy / mag];
+  const hubClear = reach(dir[0], dir[1], MARK_BOX_W / 2, HUB_HALF_H);
+  const gateClear = reach(dir[0], dir[1], MARK_BOX_W / 2, GATE_HALF_H);
+  const len = Math.max(mag - hubClear - gateClear, 0);
+  return {
+    from: [dir[0] * hubClear, HUB_MID_Y + dir[1] * hubClear],
+    to: [dir[0] * (hubClear + len), HUB_MID_Y + dir[1] * (hubClear + len)],
+    dir,
+    len,
+  };
+});
+
+/**
+ * One spoke as a dashed run rather than a solid line.
  *
  * A continuous line reads as a pipe that is simply *there*; a run of marks
- * reads as a channel with traffic on it, and it gives the pulses something to
- * travel against so movement is visible even when the camera is still.
+ * reads as a channel with traffic on it, and it gives the documents something
+ * to travel against so movement is visible even when the camera is still.
  */
-const LANE_TICKS = (() => {
+function spokeTicks(sp: Spoke) {
   const pts: number[] = [];
   const step = 0.34;
-  for (let x = HUB_X; x <= LANE_END; x += step) {
-    pts.push(x, LANE_Y, 0, x + step * 0.42, LANE_Y, 0);
+  for (let d = 0; d <= sp.len; d += step) {
+    const b = Math.min(d + step * 0.42, sp.len);
+    pts.push(
+      sp.from[0] + sp.dir[0] * d,
+      sp.from[1] + sp.dir[1] * d,
+      0,
+      sp.from[0] + sp.dir[0] * b,
+      sp.from[1] + sp.dir[1] * b,
+      0,
+    );
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
   return g;
-})();
+}
+
+const SPOKE_TICKS = SPOKES.map(spokeTicks);
 
 /* ------------------------------------------------------------- documents */
 
-const DOC_COUNT = 34;
+/** Per spoke, per direction. Three spokes and two directions make 72 planes. */
+const DOC_PER_SPOKE = 12;
 const DOC_GEO = new THREE.PlaneGeometry(0.3, 0.4);
 
 /**
- * Two passes of the same lane: what you send, and what comes back.
+ * Two passes of every spoke: what you send, and what comes back.
  *
  * Split into two meshes rather than recolouring one, because the colour is the
  * whole point — outbound is a draft in your own system, inbound is the same
- * document with an authority's mark on it. One mesh would mean writing an
- * instance colour buffer every frame to say something that never changes per
- * document.
+ * document with a platform's mark on it. Outbound is one flat grey for all
+ * three; inbound is the colour of the platform it is returning from, written
+ * once into the instance colours rather than lerped every frame the way it had
+ * to be when a single lane carried all three in turn.
  */
 const OUT_MATERIAL = new THREE.MeshBasicMaterial({
   color: SCENE.muted,
@@ -244,53 +237,57 @@ const OUT_MATERIAL = new THREE.MeshBasicMaterial({
 });
 
 const BACK_MATERIAL = new THREE.MeshBasicMaterial({
-  color: ACCENT,
+  color: "#ffffff",
   side: THREE.DoubleSide,
   transparent: true,
   opacity: 0,
 });
 
-/** Deterministic lane offsets — the bundle must look the same every load. */
-function laneOffsets(count: number, seed: number) {
+/** Deterministic per-document offsets — the bundle must look the same every load. */
+function docSeeds(count: number, seed: number) {
   let s = seed;
   const rand = () => {
     s = (s * 1664525 + 1013904223) % 4294967296;
     return s / 4294967296;
   };
   return Array.from({ length: count }, () => ({
-    y: (rand() - 0.5) * 1.5,
-    z: (rand() - 0.5) * 1.5,
+    /** Across the spoke, and out of its plane. */
+    across: (rand() - 0.5) * 0.68,
+    z: (rand() - 0.5) * 1.3,
     phase: rand(),
     spin: (rand() - 0.5) * 0.7,
   }));
 }
 
-function Documents({
-  reduced,
-  reach,
-  back,
-}: {
-  reduced: boolean;
-  reach: React.RefObject<number>;
-  back: React.RefObject<THREE.Color>;
-}) {
+const DOC_COUNT = DOC_PER_SPOKE * AUTHORITIES.length;
+
+function Documents({ reduced, reach }: { reduced: boolean; reach: React.RefObject<number[]> }) {
   const out = useRef<THREE.InstancedMesh>(null);
   const ret = useRef<THREE.InstancedMesh>(null);
-  const outSeeds = useMemo(() => laneOffsets(DOC_COUNT, 0x51de), []);
-  const retSeeds = useMemo(() => laneOffsets(DOC_COUNT, 0x9a12), []);
+  const outSeeds = useMemo(() => docSeeds(DOC_COUNT, 0x51de), []);
+  const retSeeds = useMemo(() => docSeeds(DOC_COUNT, 0x9a12), []);
   const m = useMemo(() => new THREE.Matrix4(), []);
   const q = useMemo(() => new THREE.Quaternion(), []);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const scl = useMemo(() => new THREE.Vector3(), []);
 
+  /* Written once. Which platform stamped a document never changes, so the
+     colour is a property of the instance, not of the frame. */
+  useEffect(() => {
+    const mesh = ret.current;
+    if (!mesh) return;
+    const c = new THREE.Color();
+    for (let i = 0; i < DOC_COUNT; i++) {
+      c.set(AUTHORITIES[Math.floor(i / DOC_PER_SPOKE)].color);
+      mesh.setColorAt(i, c);
+    }
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, []);
+
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
     const time = reduced ? 0.35 : state.clock.elapsedTime;
-    const live = reach.current ?? 0;
-
-    // How far down the lane traffic is allowed to be seen. Documents only
-    // exist as far as the connection has been made in the story.
-    const far = HUB_X + (LANE_END - HUB_X) * clamp(live, 0, 1);
+    const live = reach.current ?? [];
 
     for (const [mesh, seeds, dir] of [
       [out.current, outSeeds, 1],
@@ -298,15 +295,33 @@ function Documents({
     ] as const) {
       if (!mesh) continue;
       for (let i = 0; i < DOC_COUNT; i++) {
+        const lane = Math.floor(i / DOC_PER_SPOKE);
+        const sp = SPOKES[lane];
         const s = seeds[i];
         let p = (s.phase + time * 0.075) % 1;
         if (dir < 0) p = 1 - p;
-        const x = HUB_X + (LANE_END - HUB_X) * p;
+        const d = p * sp.len;
 
-        // Fade a document out as it passes the point the story has reached,
-        // rather than clipping it: a hard edge in mid-air reads as a bug.
-        const room = clamp((far - x) / 2.2, 0, 1);
-        pos.set(x, LANE_Y + s.y, s.z);
+        /* Two separate things, and the lane version conflated them.
+           A moving frontier was right when the story walked *down* a lane —
+           traffic only existed as far as the page had got. A spoke is either
+           connected or it is not, so how far the story has come belongs to the
+           whole run at once, and it left every document shrinking to nothing
+           before it ever reached the platform it was addressed to.
+
+           The taper is the other thing: a small fade at each end, so nothing
+           pops into being against a lockup. */
+        const open = clamp(live[lane] ?? 0, 0, 1);
+        const edge = clamp(Math.min(d, sp.len - d) / 0.55, 0, 1);
+        const room = edge * clamp(open * 1.6 - 0.25, 0, 1);
+
+        // Offset across the spoke, not along Y: on a spoke running diagonally
+        // a vertical spread would splay the bundle instead of widening it.
+        pos.set(
+          sp.from[0] + sp.dir[0] * d - sp.dir[1] * s.across,
+          sp.from[1] + sp.dir[1] * d + sp.dir[0] * s.across,
+          s.z,
+        );
         scl.setScalar(room * (0.85 + 0.15 * Math.sin(time * 2 + i)));
         q.setFromAxisAngle(UP, s.spin + time * (reduced ? 0 : 0.25) * dir);
         m.compose(pos, q, scl);
@@ -315,10 +330,11 @@ function Documents({
       mesh.instanceMatrix.needsUpdate = true;
     }
 
-    const shown = clamp(live * 1.4, 0, 1);
+    /* The busiest spoke sets the opacity. Per-instance fading is what `room`
+       already does; this is only the field arriving at all. */
+    const shown = clamp(Math.max(0, ...live) * 1.4, 0, 1);
     OUT_MATERIAL.opacity = damp(OUT_MATERIAL.opacity, shown * 0.55, 3, dt);
     BACK_MATERIAL.opacity = damp(BACK_MATERIAL.opacity, shown * 0.85, 3, dt);
-    if (back.current) BACK_MATERIAL.color.copy(back.current);
   });
 
   return (
@@ -358,7 +374,7 @@ function Gate({
   reduced: boolean;
 }) {
   const a = AUTHORITIES[index];
-  const x = gateX(index);
+  const [x, y] = authorityPos(index);
 
   const cloud = useMemo(() => {
     const mark = AUTHORITY_MARKS[a.id];
@@ -384,7 +400,7 @@ function Gate({
     if (ringMat.current) {
       ringMat.current.opacity = damp(
         ringMat.current.opacity,
-        built * (0.58 + active * 0.42),
+        built * (0.58 + active * 0.42) * hush(p),
         4,
         dt,
       );
@@ -418,19 +434,19 @@ function Gate({
   });
 
   return (
-    <group position={[x, LANE_Y, 0]}>
-      {/* Square to the camera, like everything else on this lane.
+    <group position={[x, y, 0]}>
+      {/* Square to the camera, like everything else in this scene.
 
           The gate was a torus turned a quarter about Y so it stood *across*
           the lane facing the traffic — right in plan and useless on screen,
-          since the camera watches the lane side-on and an edge-on ring reads
-          as a bar. It faced the camera after that, and was still a ring: a
-          diagram of a gate rather than a statement about who is behind it. */}
+          since the camera watched side-on and an edge-on ring read as a bar.
+          It faced the camera after that, and was still a ring: a diagram of a
+          gate rather than a statement about who is behind it. */}
       {cloud && (
         <points ref={ring} geometry={cloud.geometry} scale={0.001}>
           <pointsMaterial
             ref={ringMat}
-            size={0.052}
+            size={MARK_DOT}
             vertexColors
             transparent
             opacity={0}
@@ -452,7 +468,9 @@ function Gate({
           worth adding. Where there is no mark yet, the name has to carry the
           gate on its own. */}
       <group ref={label} scale={0.001}>
-        <Billboard position={[0, cloud ? -(markHalf + 0.62) : GATE_R + 0.72, 0]}>
+        <Billboard
+          position={[0, cloud ? -(markHalf + CAPTION_GAP) : GATE_R + 0.72, 0]}
+        >
           {!cloud && (
             <Text
               fontSize={0.46}
@@ -488,96 +506,98 @@ function Gate({
 
 /* ------------------------------------------------------------------- hub */
 
-/** Your system. One object, at the near end, where every document starts. */
-function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
-  const cloud = useMemo(() => buildMark(AIODYX_MARK), []);
-  const core = useRef<THREE.Points>(null);
-  const mat = useRef<THREE.PointsMaterial>(null);
-  const label = useRef<THREE.Group>(null);
+/**
+ * Your system, at the centre: our name, with the platform it runs on under it.
+ *
+ * The one thing on the page that is not a party being *connected to* — it is
+ * the place all three spokes start. So it holds the middle, and the ring is
+ * arranged about it rather than the other way round.
+ */
+function Hub({ reduced }: { reduced: boolean }) {
+  const brand = useMemo(() => buildMark(AIODYX_MARK), []);
+  const odoo = useMemo(() => buildMark(ODOO_MARK), []);
+  const core = useRef<THREE.Group>(null);
+  const brandMat = useRef<THREE.PointsMaterial>(null);
+  const odooMat = useRef<THREE.PointsMaterial>(null);
+
+  /* Stacked off the two measured half-heights, so the gap between them is the
+     gap and not whatever two boxes of different shapes happen to leave. */
+  const brandHalf = brand?.halfH ?? 0;
+  const odooHalf = (odoo?.halfH ?? 0) * ODOO_SCALE;
+  const brandY = odooHalf + HUB_STACK_GAP;
+  const odooY = -(brandHalf + HUB_STACK_GAP);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
     const p = scroll.progress;
-    const [firstGate] = rangeOf(AUTHORITIES[0].id);
+
+    /**
+     * Recedes to a watermark while a platform holds the frame.
+     *
+     * It cannot move out of the way: it is the middle of the ring, so the
+     * framing that puts a platform opposite its copy column puts the hub
+     * *under* that column — for two of the three, whichever way the camera is
+     * pushed. Dimming is the only lever left, and it is the right one anyway:
+     * on those beats the subject is the platform, and the hub only has to say
+     * that the spoke runs back to something.
+     */
+    let held = 0;
+    for (const a of AUTHORITIES) held = Math.max(held, owns(p, a.id, 0.3));
+    const quiet = (1 - held * 0.88) * hush(p);
 
     /* Up from the first frame, not faded in over the opening beat.
        Gating this on scroll made the hero render empty — the top of the page
        cannot scroll above zero, so `beat(p, 0, introTo)` is exactly 0 there.
        The damp from zero is the entrance. Services learned the same thing. */
-    const shown = 1;
-
-    /* The hub stays — every document on the lane starts here — but it stops
-       competing once the tour begins. At the first gate the camera is only a
-       few units down the lane, so the hub is still in frame and lands right
-       under the copy column. */
-    const stepped = beat(p, firstGate - 0.08, firstGate + 0.02);
-    // At 0.62 this left the hub at 28% opacity — still a wireframe sphere
-    // sitting squarely behind the first gate's copy column, because the camera
-    // is only a couple of units down the lane at that point and the hub has
-    // not gone off-frame yet. It has to be all but gone, not merely dimmer.
-    const quiet = 1 - stepped * 0.9;
-
-    if (mat.current) {
-      mat.current.opacity = damp(mat.current.opacity, shown * 0.95 * quiet, 3, dt);
+    if (brandMat.current) {
+      brandMat.current.opacity = damp(brandMat.current.opacity, 0.95 * quiet, 3, dt);
+    }
+    if (odooMat.current) {
+      odooMat.current.opacity = damp(odooMat.current.opacity, 0.9 * quiet, 3, dt);
     }
     if (core.current) {
       /* The sphere this replaced turned on Y. A wordmark cannot: a logotype
          rotated even a little stops being readable, which is the rule the
-         gates' marks and the home page's logotype both follow. The life comes
-         from a breath in scale instead. */
+         platforms' marks and the home page's logotype both follow. The life
+         comes from a breath in scale instead. */
       const breath = reduced ? 0 : Math.sin(state.clock.elapsedTime * 0.9) * 0.01;
-      core.current.scale.setScalar(
-        damp(core.current.scale.x, Math.max(shown + breath, 0.001), 3, dt),
-      );
-    }
-    if (label.current) {
-      /* The label goes entirely: a dim ring behind a headline is texture, but
-         dim *words* behind a headline are just two things to read at once.
-
-         It is also absent for the *opening* beat, whose copy is centred — the
-         label sits 1.85 above the hub and landed straight on the hero
-         headline, two pieces of display type in the same place. It arrives at
-         `why`, which is the first beat with a side to it. */
-      const [whyFrom] = rangeOf("why");
-      const named = beat(p, whyFrom - 0.05, whyFrom + 0.02);
-      const vis = shown * named * (1 - stepped);
-      label.current.scale.setScalar(damp(label.current.scale.x, Math.max(vis, 0.001), 4, dt));
+      core.current.scale.setScalar(damp(core.current.scale.x, 1 + breath, 3, dt));
     }
   });
 
   return (
-    <group position={[HUB_X, LANE_Y, 0]}>
-      {cloud && (
-        <points ref={core} geometry={cloud.geometry} scale={0.001}>
-          <pointsMaterial
-            ref={mat}
-            size={0.052}
-            vertexColors
-            transparent
-            opacity={0}
-            sizeAttenuation
-            depthWrite={false}
-          />
-        </points>
-      )}
-      {/* Under the mark, like every gate caption — the logo says who, the
-          caption says what it is. Above the mark it landed on the hero
-          headline, which is centred copy on the opening beat. */}
-      <group ref={label} scale={0.001}>
-        <Billboard position={[0, -((cloud?.halfH ?? 0) + 0.62), 0]}>
-          <Text
-            fontSize={0.34}
-            color={SCENE.base}
-            anchorX="center"
-            anchorY="middle"
-            font={arabicFontUrl(locale)}
-            letterSpacing={locale === "ar" ? 0 : 0.1}
-            outlineWidth={0.01}
-            outlineColor={SCENE.outline}
+    <group position={[0, HUB_MID_Y, 0]}>
+      <group ref={core} scale={0.001}>
+        {brand && (
+          <points geometry={brand.geometry} position={[0, brandY, 0]}>
+            <pointsMaterial
+              ref={brandMat}
+              size={MARK_DOT}
+              vertexColors
+              transparent
+              opacity={0}
+              sizeAttenuation
+              depthWrite={false}
+            />
+          </points>
+        )}
+        {odoo && (
+          <points
+            geometry={odoo.geometry}
+            position={[0, odooY, 0]}
+            scale={ODOO_SCALE}
           >
-            {displayCase("Odoo ERP", locale)}
-          </Text>
-        </Billboard>
+            <pointsMaterial
+              ref={odooMat}
+              size={MARK_DOT / ODOO_SCALE}
+              vertexColors
+              transparent
+              opacity={0}
+              sizeAttenuation
+              depthWrite={false}
+            />
+          </points>
+        )}
       </group>
     </group>
   );
@@ -585,13 +605,44 @@ function Hub({ reduced, locale }: { reduced: boolean; locale: Locale }) {
 
 /* ------------------------------------------------------------------- rig */
 
+/** Close enough that a platform and the spoke it stands on fill the frame. */
+const NEAR_DIST = 12;
+/** The hub with three spokes running out of it, before any platform arrives. */
+const WHY_DIST = 15.5;
+/** Back far enough to hold the whole ring, marks and captions included. */
+const WIDE_DIST = 22.5;
 /**
- * Camera: tracks sideways down the lane, then pulls back to show it whole.
+ * The hub alone, at the opening — further out than `why` needs it.
  *
- * Kept square to the lane — no yaw at all — so world X is screen X. That is
- * what lets the gate be parked opposite its own copy column by moving the
+ * The hero drops the lockup to the lower third under centred copy, and the
+ * lockup is two marks tall now rather than one. Closer in, the room left below
+ * the subtitle is not enough to hold both, and the Odoo mark under our own
+ * name — the thing this beat is introducing — fell off the bottom edge.
+ */
+const OPEN_DIST = 22;
+
+/**
+ * How far from the hub toward a platform the camera parks for its beat.
+ *
+ * Not all the way — the spoke has to stay in shot, or the beat becomes a logo
+ * on its own, which is what the page spent the previous section saying it is
+ * not. Not much less, either: the hub sits opposite the platform, so any
+ * framing that holds both puts one of them where the copy column is.
+ *
+ * At roughly three quarters the platform owns the free half, the spoke runs
+ * out of frame toward a hub that is still faintly there, and the reader is
+ * told where it goes without being asked to read two things at once.
+ */
+const GATE_BIAS = 0.76;
+
+/**
+ * Camera: holds the hub, walks out to each platform in turn, then pulls back
+ * to show the whole ring.
+ *
+ * Kept square to the ring — no yaw at all — so world X is screen X. That is
+ * what lets a platform be parked opposite its own copy column by moving the
  * camera alone: with the camera turned, the same offset would swing the whole
- * lane through the frame instead of sliding it.
+ * field through the frame instead of sliding it.
  */
 function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
   /* From the locale, not `scroll.rtl`: that flag is published by an effect, so
@@ -611,7 +662,7 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     const [moreFrom] = rangeOf("more");
     const last = AUTHORITIES.length - 1;
 
-    // Which gate owns the frame, and how strongly.
+    // Which platform owns the frame, and how strongly.
     let focus = -1;
     let amt = 0;
     for (let i = 0; i < AUTHORITIES.length; i++) {
@@ -625,65 +676,111 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     /**
      * The pull-back happens at `more`, not at `how`.
      *
-     * `how` carries four cards over half the frame, and the lane is twenty-six
-     * units long — at any distance that fits all three gates, two of them land
-     * squarely behind those cards. `more` and `close` are a headline and a
-     * paragraph, which the whole lane can sit under.
+     * `how` carries four cards over half the frame; at any distance that holds
+     * the whole ring, two of the three platforms land squarely behind them.
+     * `more` and `close` are a headline and a paragraph, which the ring can
+     * sit under.
      */
     const wide = beat(p, moreFrom - 0.05, moreFrom + 0.04);
 
     /**
-     * The opening beat is centred copy, so the lane has to leave the middle of
-     * the frame entirely rather than sit behind the headline.
+     * The opening beat is centred copy, so the field has to leave the middle
+     * of the frame entirely rather than sit behind the headline.
      *
      * It drops to the lower third — a pure vertical pan, camera and target
      * lifted by the same amount, so the viewing angle does not change and the
-     * lane simply sits lower. Tilting instead would have foreshortened the
-     * gates just as the page is trying to introduce them.
+     * hub simply sits lower. Tilting instead would have foreshortened the ring
+     * just as the page is trying to introduce it.
      */
     const opening = 1 - beat(p, whyFrom - 0.06, whyFrom + 0.02);
-    /* 4.6, and the pull-back to 17 that goes with it, are one decision. At
-       11.5 the frame is only ~10 units tall, and no lift both clears the
-       subtitle's last line and keeps the hub off the bottom edge — it is a
-       2.3-unit sphere and there is not room for it. Further back buys the
-       margin the drop needs. */
-    const lift = opening * 4.6;
-    /** Past the gates but not yet pulled back: `how` holds the last one. */
+    const lift = opening * 5.65;
+    /** Past the platforms but not yet pulled back: `how` holds the last one. */
     const tail = beat(p, howFrom - 0.05, howFrom + 0.03);
 
-    /* Target X walks the lane: the hub at the open, each gate in turn, the
-       last gate held through `how`, then the midpoint once it pulls back. */
-    let targetX = HUB_X + 1.4;
-    if (focus >= 0) targetX = gateX(focus);
-    else if (tail > 0.01) targetX = gateX(last);
-    else if (p > whyFrom) targetX = HUB_X + 2.6;
-    targetX = THREE.MathUtils.lerp(targetX, (HUB_X + LANE_END) / 2, wide);
+    /* Where the camera centres. The hub while the page is introducing itself,
+       out along a spoke while a platform is being made its case for, the whole
+       field once it pulls back. */
+    let tx = 0;
+    let ty = HUB_MID_Y;
+    const walk = focus >= 0 ? focus : tail > 0.01 ? last : -1;
+    const bias = focus >= 0 ? amt : tail;
+    if (walk >= 0) {
+      const [gx, gy] = authorityPos(walk);
+      const k = GATE_BIAS * bias * (1 - wide);
+      tx = gx * k;
+      ty = HUB_MID_Y + (gy - HUB_MID_Y) * k;
+    }
+    ty = THREE.MathUtils.lerp(ty, FIELD_MID_Y, wide);
 
     /**
-     * Park the lane opposite its copy column. <StoryOverlay> alternates by
-     * beat index: the gates are beats 2, 3 and 4, so even-indexed gates have
-     * their copy on the left and want the lane pushed right. `how` is beat 5,
+     * Park the platform opposite its copy column. <StoryOverlay> alternates by
+     * beat index: the platforms are beats 2, 3 and 4, so even-indexed ones have
+     * their copy on the left and want the field pushed right. `how` is beat 5,
      * odd, so it wants the opposite — hence the explicit +1 rather than
-     * falling through to the gate rule with no gate in focus.
+     * falling through to the platform rule with no platform in focus.
+     *
+     * Smaller than the lane version needed, because the ring already does most
+     * of it: GOSI stands to the left of the hub on the beat whose copy is on
+     * the right, and QIWA to the right on the beat whose copy is on the left.
+     * This only finishes the job — and squares up ZATCA, which stands directly
+     * over the hub and has no side of its own.
      */
     /* `flex-start` is the right-hand side under RTL, so the whole alternation
-       mirrors in Arabic — without this the gate is pushed to the same side the
-       copy just moved to and the two land on top of each other. */
+       mirrors in Arabic — without this the platform is pushed to the same side
+       the copy just moved to and the two land on top of each other. */
     const side = (focus >= 0 ? (focus % 2 === 0 ? -1 : 1) : 1) * flip;
     const push = Math.max(amt, tail);
-    targetX += side * push * (1 - wide) * 2.1;
+    /* Scaled by how little the ring already gave this platform. GOSI stands
+       nearly a full radius to the left and QIWA the same to the right, so they
+       need a nudge; ZATCA stands directly over the hub with no side at all and
+       needs the whole shift. */
+    const own = walk >= 0 ? Math.abs(authorityPos(walk)[0]) / RING_RX : 1;
+    tx += side * push * (1 - wide) * (0.7 + 2.2 * (1 - own));
+
+    /* `more` has a copy column and wants the ring opposite it; `close` is
+       centred and wants the ring centred behind it — see `hush`. The lerp is
+       the settle from one to the other. */
+    const closing = owns(p, "close", 0.3);
+    tx += wide * flip * THREE.MathUtils.lerp(-2.8, 0, closing);
+
+    /* `why` is the one beat with a copy column and nothing on the ring yet, so
+       the platform rule above has no platform to work from and left the hub
+       sitting squarely under four cards. It gets the same treatment by hand. */
+    tx += (1 - opening) * (1 - push) * (1 - wide) * flip * 3.2;
 
     const dist = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(THREE.MathUtils.lerp(11.5, 17, opening), 8.6, push),
-      26,
+      THREE.MathUtils.lerp(
+        OPEN_DIST,
+        THREE.MathUtils.lerp(WHY_DIST, NEAR_DIST, push),
+        1 - opening,
+      ),
+      WIDE_DIST,
       wide,
     );
-    const high = THREE.MathUtils.lerp(1.1, 2.2, wide);
 
-    let cx = targetX;
-    // Camera and look target take the same lift, which is what makes the
-    // opening a pan rather than a tilt.
-    let cy = high + lift;
+    /**
+     * The hub never leaves the frame.
+     *
+     * Everything above pushes the camera *away* from the centre to park a
+     * platform opposite its copy — and under Arabic the copy columns mirror
+     * while the ring does not, so the same rule pushed half again as far and
+     * cropped the lockup down the middle at the frame edge. A logo cut in half
+     * is worse than one that is simply not there.
+     *
+     * Measured from the camera's own frustum rather than a guessed number, so
+     * it holds at every distance and on every viewport shape.
+     */
+    if (!wide) {
+      const halfW =
+        dist *
+        Math.tan(((camera as THREE.PerspectiveCamera).fov * Math.PI) / 360) *
+        (camera as THREE.PerspectiveCamera).aspect;
+      const room = Math.max(halfW * 0.98 - MARK_BOX_W / 2, 0);
+      tx = THREE.MathUtils.clamp(tx, -room, room);
+    }
+
+    let cx = tx;
+    let cy = ty + lift;
     if (!reduced) {
       pointer.current.x = damp(pointer.current.x, state.pointer.x, 2.2, dt);
       pointer.current.y = damp(pointer.current.y, state.pointer.y, 2.2, dt);
@@ -695,14 +792,10 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     camera.position.y = damp(camera.position.y, cy, 2.4, dt);
     camera.position.z = damp(camera.position.z, dist, 2.4, dt);
 
-    // Square to the lane: look straight down -Z from wherever we are.
-    // Raising the look point drops the lane in frame — at the pull-back that
-    // is what keeps three gates and their labels clear of the closing copy.
-    look.current.set(
-      camera.position.x,
-      LANE_Y + high * 0.25 + wide * 4.3 + lift,
-      0,
-    );
+    /* Square to the ring: look straight down −Z from wherever we are. The
+       look point takes the same lift as the camera, which is what makes the
+       opening a pan rather than a tilt. */
+    look.current.set(camera.position.x, camera.position.y, 0);
     camera.lookAt(look.current);
   });
 
@@ -712,59 +805,53 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
 /* ----------------------------------------------------------------- scene */
 
 export function IntegrationsScene({ reduced, locale }: SceneEnv) {
-  const laneMat = useRef<THREE.LineBasicMaterial>(null);
-  /** How much of the lane the story has opened, 0 → 1. Shared with the docs. */
-  const reach = useRef(0);
-  /** The colour returning documents carry — the active authority's. */
-  const back = useRef(new THREE.Color(ACCENT));
-  const target = useRef(new THREE.Color());
+  const laneMats = useRef<(THREE.LineBasicMaterial | null)[]>([]);
+  /** How much of each spoke the story has opened, 0 → 1. Shared with the docs. */
+  const reach = useRef(AUTHORITIES.map(() => 0));
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 30);
     const p = scroll.progress;
-
-    // One gate's worth of lane per authority reached, latching as it goes:
-    // `beat()` clamps and stays, which is what a made connection should do.
-    let made = 0;
-    for (const a of AUTHORITIES) {
-      const [from] = rangeOf(a.id);
-      made += beat(p, from - 0.05, from + 0.03);
-    }
     const [whyFrom] = rangeOf("why");
-    /* Floored: the channel is there before anything runs down it, which is
-       what tells the visitor at the top of the page where this is going. */
-    const opened = Math.max(
-      0.1,
-      beat(p, whyFrom, whyFrom + 0.04) * 0.34,
-      made / AUTHORITIES.length,
-    );
-    reach.current = damp(reach.current, opened, 3, dt);
 
-    let focus = -1;
-    let amt = 0;
+    /* Floored once the page has said why any of this matters: the channels are
+       there before anything runs down them, which is what tells the visitor
+       where this is going. */
+    const floor = beat(p, whyFrom, whyFrom + 0.04) * 0.32;
+
     for (let i = 0; i < AUTHORITIES.length; i++) {
-      const o = owns(p, AUTHORITIES[i].id, 0.3);
-      if (o > amt) {
-        amt = o;
-        focus = i;
-      }
-    }
-    target.current.set(focus >= 0 ? AUTHORITIES[focus].color : PEAK);
-    back.current.lerp(target.current, 1 - Math.exp(-2.5 * dt));
-
-    if (laneMat.current) {
-      laneMat.current.opacity = damp(laneMat.current.opacity, reach.current * 0.5, 3, dt);
+      const [from] = rangeOf(AUTHORITIES[i].id);
+      // Latching: a connection that is made does not come apart because you
+      // scrolled past it.
+      const made = beat(p, from - 0.05, from + 0.03);
+      reach.current[i] = damp(
+        reach.current[i],
+        Math.max(0.1, floor, made),
+        3,
+        dt,
+      );
+      const mat = laneMats.current[i];
+      if (mat) mat.opacity = damp(mat.opacity, reach.current[i] * 0.5, 3, dt);
     }
   });
 
   return (
     <>
-      <lineSegments geometry={LANE_TICKS} frustumCulled={false}>
-        <lineBasicMaterial ref={laneMat} color={SCENE.muted} transparent opacity={0} />
-      </lineSegments>
+      {SPOKE_TICKS.map((g, i) => (
+        <lineSegments key={AUTHORITIES[i].id} geometry={g} frustumCulled={false}>
+          <lineBasicMaterial
+            ref={(m) => {
+              laneMats.current[i] = m;
+            }}
+            color={SCENE.muted}
+            transparent
+            opacity={0}
+          />
+        </lineSegments>
+      ))}
 
-      <Hub reduced={reduced} locale={locale} />
-      <Documents reduced={reduced} reach={reach} back={back} />
+      <Hub reduced={reduced} />
+      <Documents reduced={reduced} reach={reach} />
       {AUTHORITIES.map((a, i) => (
         <Gate key={a.id} index={i} locale={locale} reduced={reduced} />
       ))}
