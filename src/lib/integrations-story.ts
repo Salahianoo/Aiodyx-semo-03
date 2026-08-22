@@ -48,10 +48,28 @@ export const RING_RX = 8;
  */
 export const RING_RY = 6.6;
 
-/** Where a platform stands, in the plane the camera faces. */
-export const authorityPos = (i: number): [number, number] => {
+/**
+ * Where a platform stands, in the plane the camera faces.
+ *
+ * `mirror` is −1 under Arabic, and the ring genuinely has to flip.
+ *
+ * <StoryOverlay> places each copy column with `flex-start`/`flex-end`, which
+ * are *logical* — so every column swaps sides under RTL while a ring fixed in
+ * world space does not. GOSI stands to the left of the hub and its beat reads
+ * on the right in English; in Arabic that beat reads on the *left* and GOSI
+ * was still on the left, so the mark landed on its own paragraph. No amount of
+ * camera push fixes that: both things are on the same side of the hub, and
+ * moving the camera moves them together.
+ *
+ * The marks themselves are not mirrored — only where they stand. A logotype
+ * flipped is a different logo.
+ */
+export const authorityPos = (
+  i: number,
+  mirror: number,
+): [number, number] => {
   const a = (AUTHORITIES[i].angle * Math.PI) / 180;
-  return [RING_RX * Math.cos(a), RING_RY * Math.sin(a)];
+  return [mirror * RING_RX * Math.cos(a), RING_RY * Math.sin(a)];
 };
 
 /** The middle of the hub's stack — the AIODYX mark with Odoo under it. */

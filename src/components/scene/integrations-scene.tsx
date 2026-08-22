@@ -9,7 +9,6 @@ import type { SceneEnv } from "@/components/story-page";
 import {
   AUTHORITIES,
   FIELD_MID_Y,
-  RING_RX,
   HUB_MID_Y,
   authorityName,
   authorityPos,
@@ -169,21 +168,27 @@ const GATE_HALF_H = MARK_BOX_H / 2 + CAPTION_GAP + 0.16;
  * before the mark it arrives at: a line that touches a logo reads as an arrow
  * pointing at it, and these are channels, not annotations.
  */
-const SPOKES: Spoke[] = AUTHORITIES.map((_, i) => {
-  const [gx, gy] = authorityPos(i);
-  const dy = gy - HUB_MID_Y;
-  const mag = Math.hypot(gx, dy) || 1;
-  const dir: [number, number] = [gx / mag, dy / mag];
-  const hubClear = reach(dir[0], dir[1], MARK_BOX_W / 2, HUB_HALF_H);
-  const gateClear = reach(dir[0], dir[1], MARK_BOX_W / 2, GATE_HALF_H);
-  const len = Math.max(mag - hubClear - gateClear, 0);
-  return {
-    from: [dir[0] * hubClear, HUB_MID_Y + dir[1] * hubClear],
-    to: [dir[0] * (hubClear + len), HUB_MID_Y + dir[1] * (hubClear + len)],
-    dir,
-    len,
-  };
-});
+const spokesFor = (mirror: number): Spoke[] =>
+  AUTHORITIES.map((_, i) => {
+    const [gx, gy] = authorityPos(i, mirror);
+    const dy = gy - HUB_MID_Y;
+    const mag = Math.hypot(gx, dy) || 1;
+    const dir: [number, number] = [gx / mag, dy / mag];
+    const hubClear = reach(dir[0], dir[1], MARK_BOX_W / 2, HUB_HALF_H);
+    const gateClear = reach(dir[0], dir[1], MARK_BOX_W / 2, GATE_HALF_H);
+    const len = Math.max(mag - hubClear - gateClear, 0);
+    return {
+      from: [dir[0] * hubClear, HUB_MID_Y + dir[1] * hubClear],
+      to: [dir[0] * (hubClear + len), HUB_MID_Y + dir[1] * (hubClear + len)],
+      dir,
+      len,
+    };
+  });
+
+/* Both handednesses, built once. Geometry only — no DOM — so this is safe at
+   module scope, and the scene picks the one its locale reads in. */
+const SPOKE_SETS = [spokesFor(1), spokesFor(-1)];
+const spokeSet = (mirror: number) => SPOKE_SETS[mirror < 0 ? 1 : 0];
 
 /**
  * One spoke as a dashed run rather than a solid line.
@@ -211,7 +216,8 @@ function spokeTicks(sp: Spoke) {
   return g;
 }
 
-const SPOKE_TICKS = SPOKES.map(spokeTicks);
+const SPOKE_TICK_SETS = SPOKE_SETS.map((set) => set.map(spokeTicks));
+const spokeTickSet = (mirror: number) => SPOKE_TICK_SETS[mirror < 0 ? 1 : 0];
 
 /* ------------------------------------------------------------- documents */
 
@@ -261,7 +267,15 @@ function docSeeds(count: number, seed: number) {
 
 const DOC_COUNT = DOC_PER_SPOKE * AUTHORITIES.length;
 
-function Documents({ reduced, reach }: { reduced: boolean; reach: React.RefObject<number[]> }) {
+function Documents({
+  reduced,
+  reach,
+  spokes,
+}: {
+  reduced: boolean;
+  reach: React.RefObject<number[]>;
+  spokes: Spoke[];
+}) {
   const out = useRef<THREE.InstancedMesh>(null);
   const ret = useRef<THREE.InstancedMesh>(null);
   const outSeeds = useMemo(() => docSeeds(DOC_COUNT, 0x51de), []);
@@ -296,7 +310,7 @@ function Documents({ reduced, reach }: { reduced: boolean; reach: React.RefObjec
       if (!mesh) continue;
       for (let i = 0; i < DOC_COUNT; i++) {
         const lane = Math.floor(i / DOC_PER_SPOKE);
-        const sp = SPOKES[lane];
+        const sp = spokes[lane];
         const s = seeds[i];
         let p = (s.phase + time * 0.075) % 1;
         if (dir < 0) p = 1 - p;
@@ -368,13 +382,15 @@ function Gate({
   index,
   locale,
   reduced,
+  mirror,
 }: {
   index: number;
   locale: Locale;
   reduced: boolean;
+  mirror: number;
 }) {
   const a = AUTHORITIES[index];
-  const [x, y] = authorityPos(index);
+  const [x, y] = authorityPos(index, mirror);
 
   const cloud = useMemo(() => {
     const mark = AUTHORITY_MARKS[a.id];
@@ -539,11 +555,16 @@ function Hub({ reduced }: { reduced: boolean }) {
      * *under* that column — for two of the three, whichever way the camera is
      * pushed. Dimming is the only lever left, and it is the right one anyway:
      * on those beats the subject is the platform, and the hub only has to say
-     * that the spoke runs back to something.
+     * that the spoke runs back to something. Down to a twentieth: it is behind
+     * body copy at that moment, and body copy is the thing that has to win.
      */
-    let held = 0;
+    let held = owns(p, "how", 0.3);
     for (const a of AUTHORITIES) held = Math.max(held, owns(p, a.id, 0.3));
-    const quiet = (1 - held * 0.88) * hush(p);
+    /* `how` counts. It is framed on the last platform, so the hub sits in the
+       half the copy is using — and it was the one beat that left the lockup at
+       full strength, which is how "Built Into the System" ended up reading
+       through an Odoo wordmark. */
+    const quiet = (1 - held * 0.93) * hush(p);
 
     /* Up from the first frame, not faded in over the opening beat.
        Gating this on scroll made the hero render empty — the top of the page
@@ -622,18 +643,16 @@ const WIDE_DIST = 22.5;
 const OPEN_DIST = 22;
 
 /**
- * How far from the hub toward a platform the camera parks for its beat.
+ * Where a mark sits across the free half of the frame, as a share of it.
  *
- * Not all the way — the spoke has to stay in shot, or the beat becomes a logo
- * on its own, which is what the page spent the previous section saying it is
- * not. Not much less, either: the hub sits opposite the platform, so any
- * framing that holds both puts one of them where the copy column is.
- *
- * At roughly three quarters the platform owns the free half, the spoke runs
- * out of frame toward a hub that is still faintly there, and the reader is
- * told where it goes without being asked to read two things at once.
+ * The copy column is `max-w-xl` pinned to one edge, so it takes rather less
+ * than half the width on a wide monitor and about half on a laptop. Parking
+ * the mark at just under half of the *other* half centres it in the space the
+ * column is not using, at either shape — and being a fraction rather than a
+ * number is the point: this is what the fixed offsets got wrong.
  */
-const GATE_BIAS = 0.76;
+const MARK_HALF = 0.44;
+
 
 /**
  * Camera: holds the hub, walks out to each platform in turn, then pulls back
@@ -658,20 +677,8 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     const p = scroll.progress;
 
     const [whyFrom] = rangeOf("why");
-    const [howFrom] = rangeOf("how");
     const [moreFrom] = rangeOf("more");
     const last = AUTHORITIES.length - 1;
-
-    // Which platform owns the frame, and how strongly.
-    let focus = -1;
-    let amt = 0;
-    for (let i = 0; i < AUTHORITIES.length; i++) {
-      const o = owns(p, AUTHORITIES[i].id, 0.3);
-      if (o > amt) {
-        amt = o;
-        focus = i;
-      }
-    }
 
     /**
      * The pull-back happens at `more`, not at `how`.
@@ -694,64 +701,58 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
      */
     const opening = 1 - beat(p, whyFrom - 0.06, whyFrom + 0.02);
     const lift = opening * 5.65;
-    /** Past the platforms but not yet pulled back: `how` holds the last one. */
-    const tail = beat(p, howFrom - 0.05, howFrom + 0.03);
-
-    /* Where the camera centres. The hub while the page is introducing itself,
-       out along a spoke while a platform is being made its case for, the whole
-       field once it pulls back. */
-    let tx = 0;
-    let ty = HUB_MID_Y;
-    const walk = focus >= 0 ? focus : tail > 0.01 ? last : -1;
-    const bias = focus >= 0 ? amt : tail;
-    if (walk >= 0) {
-      const [gx, gy] = authorityPos(walk);
-      const k = GATE_BIAS * bias * (1 - wide);
-      tx = gx * k;
-      ty = HUB_MID_Y + (gy - HUB_MID_Y) * k;
-    }
-    ty = THREE.MathUtils.lerp(ty, FIELD_MID_Y, wide);
-
     /**
-     * Park the platform opposite its copy column. <StoryOverlay> alternates by
-     * beat index: the platforms are beats 2, 3 and 4, so even-indexed ones have
-     * their copy on the left and want the field pushed right. `how` is beat 5,
-     * odd, so it wants the opposite — hence the explicit +1 rather than
-     * falling through to the platform rule with no platform in focus.
+     * Which station holds the frame, as a weighted blend rather than a pick.
      *
-     * Smaller than the lane version needed, because the ring already does most
-     * of it: GOSI stands to the left of the hub on the beat whose copy is on
-     * the right, and QIWA to the right on the beat whose copy is on the left.
-     * This only finishes the job — and squares up ZATCA, which stands directly
-     * over the hub and has no side of its own.
+     * The old version chose one platform and then read its strength off a
+     * different variable depending on which branch it took — `amt` while a
+     * platform owned the frame, `tail` once none did. Those two do not meet:
+     * leaving QIWA, `amt` had already fallen to nearly nothing while `tail`
+     * was most of the way up, and the frame lurched the moment the branch
+     * flipped. That is the jolt on "Built Into the System".
+     *
+     * Blending removes the branch. Every station contributes by how much it
+     * owns the frame, the sums are continuous because `owns` is, and crossing
+     * from one platform to the next now swings through the middle — the marks
+     * pass the centre of the frame between beats and settle out to their side
+     * as the next column fades up, which is the reveal the page wanted anyway.
+     *
+     * `how` is a station too: it holds the last platform, and its copy reads
+     * on the *opposite* side, so it belongs in the same sum rather than in an
+     * `else`.
      */
-    /* `flex-start` is the right-hand side under RTL, so the whole alternation
-       mirrors in Arabic — without this the platform is pushed to the same side
-       the copy just moved to and the two land on top of each other. */
-    const side = (focus >= 0 ? (focus % 2 === 0 ? -1 : 1) : 1) * flip;
-    const push = Math.max(amt, tail);
-    /* Scaled by how little the ring already gave this platform. GOSI stands
-       nearly a full radius to the left and QIWA the same to the right, so they
-       need a nudge; ZATCA stands directly over the hub with no side at all and
-       needs the whole shift. */
-    const own = walk >= 0 ? Math.abs(authorityPos(walk)[0]) / RING_RX : 1;
-    tx += side * push * (1 - wide) * (0.7 + 2.2 * (1 - own));
-
-    /* `more` has a copy column and wants the ring opposite it; `close` is
-       centred and wants the ring centred behind it — see `hush`. The lerp is
-       the settle from one to the other. */
-    const closing = owns(p, "close", 0.3);
-    tx += wide * flip * THREE.MathUtils.lerp(-2.8, 0, closing);
-
-    /* `why` is the one beat with a copy column and nothing on the ring yet, so
-       the platform rule above has no platform to work from and left the hub
-       sitting squarely under four cards. It gets the same treatment by hand. */
-    tx += (1 - opening) * (1 - push) * (1 - wide) * flip * 3.2;
+    let wx = 0;
+    let wy = 0;
+    /** −1 where the copy reads left and the mark belongs right, +1 the other way. */
+    let wSide = 0;
+    let hold = 0;
+    for (let i = 0; i < AUTHORITIES.length; i++) {
+      const o = owns(p, AUTHORITIES[i].id, 0.3);
+      if (o <= 0) continue;
+      const [gx, gy] = authorityPos(i, flip);
+      wx += gx * o;
+      wy += gy * o;
+      // Beats 2, 3 and 4: even indices read left, odd read right.
+      wSide += (i % 2 === 0 ? -1 : 1) * o;
+      hold += o;
+    }
+    const howOwn = owns(p, "how", 0.3);
+    if (howOwn > 0) {
+      const [gx, gy] = authorityPos(last, flip);
+      wx += gx * howOwn;
+      wy += gy * howOwn;
+      // Beat 5, odd — the far side from QIWA, which is beat 4.
+      wSide += howOwn;
+      hold += howOwn;
+    }
+    hold = clamp(hold, 0, 1) * (1 - wide);
+    const cx = hold > 1e-4 ? wx / Math.max(hold, 1e-4) : 0;
+    const cy = hold > 1e-4 ? wy / Math.max(hold, 1e-4) : HUB_MID_Y;
 
     const dist = THREE.MathUtils.lerp(
       THREE.MathUtils.lerp(
         OPEN_DIST,
-        THREE.MathUtils.lerp(WHY_DIST, NEAR_DIST, push),
+        THREE.MathUtils.lerp(WHY_DIST, NEAR_DIST, hold),
         1 - opening,
       ),
       WIDE_DIST,
@@ -759,37 +760,84 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
     );
 
     /**
-     * The hub never leaves the frame.
+     * How wide the frame actually is, here, now.
      *
-     * Everything above pushes the camera *away* from the centre to park a
-     * platform opposite its copy — and under Arabic the copy columns mirror
-     * while the ring does not, so the same rule pushed half again as far and
-     * cropped the lockup down the middle at the frame edge. A logo cut in half
-     * is worse than one that is simply not there.
-     *
-     * Measured from the camera's own frustum rather than a guessed number, so
-     * it holds at every distance and on every viewport shape.
+     * The offsets that park a mark clear of its copy used to be plain numbers,
+     * tuned by eye at one window size. They are a share of the *frame*, and
+     * the frame is `dist · tan(fov/2) · aspect` — so on a wider monitor than
+     * the one they were tuned on, a mark that cleared the column by a margin
+     * sat right on it. Everything below is measured from the frustum instead.
      */
-    if (!wide) {
-      const halfW =
-        dist *
-        Math.tan(((camera as THREE.PerspectiveCamera).fov * Math.PI) / 360) *
-        (camera as THREE.PerspectiveCamera).aspect;
+    const halfW =
+      dist *
+      Math.tan(((camera as THREE.PerspectiveCamera).fov * Math.PI) / 360) *
+      (camera as THREE.PerspectiveCamera).aspect;
+
+    /* Where the mark should land on screen: the middle of the half the copy is
+       not using.
+    
+       `* flip` because `wSide` is written in beat-index terms and the columns
+       those indices place are logical: `flex-start` is the *right*-hand side
+       under Arabic. Without it every mark was sent to the side its own column
+       had just moved to, and only the frame-edge clamp below — which exists for
+       something else entirely — kept two of the three from landing on their own
+       paragraph. */
+    const want =
+      hold > 1e-4
+        ? ((-wSide * flip) / Math.max(hold, 1e-4)) * halfW * MARK_HALF
+        : 0;
+
+    /* Camera x is the mark's world x minus where we want it to appear. */
+    let tx = THREE.MathUtils.lerp(0, cx - want, hold);
+    let ty = THREE.MathUtils.lerp(HUB_MID_Y, cy, hold);
+    ty = THREE.MathUtils.lerp(ty, FIELD_MID_Y, wide);
+
+    /* `more` has a copy column and wants the ring opposite it; `close` is
+       centred and wants the ring centred behind it — see `hush`. The lerp is
+       the settle from one to the other. */
+    const closing = owns(p, "close", 0.3);
+    tx += wide * flip * THREE.MathUtils.lerp(-halfW * 0.26, 0, closing);
+
+    /* `why` is the one beat with a copy column and nothing on the ring yet, so
+       the blend above has no station to work from and left the hub sitting
+       squarely under four cards. It gets the same treatment by hand. */
+    tx += (1 - opening) * (1 - hold) * (1 - wide) * flip * halfW * MARK_HALF;
+
+    /**
+     * Keep the hub in frame — but only while it is the thing being looked at.
+     *
+     * A lockup cropped down the middle at the frame edge is worse than one that
+     * is simply not there, which is what this guard is for. Applied flat,
+     * though, it pulled the camera back toward the centre on exactly the beats
+     * that were trying to get away from it: a platform a full ring-radius out
+     * needs the camera further out still, the clamp refused, and the mark came
+     * to rest on its own paragraph. It was the clamp, not the framing, holding
+     * two of the three marks over the copy.
+     *
+     * So it yields to `hold`. At `why` the hub is the subject and is held in
+     * frame; on a platform beat it is a seven-percent watermark whose only job
+     * is to say the spoke goes somewhere, and it can leave.
+     */
+    if (wide < 1) {
       const room = Math.max(halfW * 0.98 - MARK_BOX_W / 2, 0);
-      tx = THREE.MathUtils.clamp(tx, -room, room);
+      tx = THREE.MathUtils.lerp(
+        THREE.MathUtils.clamp(tx, -room, room),
+        tx,
+        hold,
+      );
     }
 
-    let cx = tx;
-    let cy = ty + lift;
+    let camX = tx;
+    let camY = ty + lift;
     if (!reduced) {
       pointer.current.x = damp(pointer.current.x, state.pointer.x, 2.2, dt);
       pointer.current.y = damp(pointer.current.y, state.pointer.y, 2.2, dt);
-      cx += pointer.current.x * 0.5;
-      cy += pointer.current.y * 0.35;
+      camX += pointer.current.x * 0.5;
+      camY += pointer.current.y * 0.35;
     }
 
-    camera.position.x = damp(camera.position.x, cx, 2.4, dt);
-    camera.position.y = damp(camera.position.y, cy, 2.4, dt);
+    camera.position.x = damp(camera.position.x, camX, 2.4, dt);
+    camera.position.y = damp(camera.position.y, camY, 2.4, dt);
     camera.position.z = damp(camera.position.z, dist, 2.4, dt);
 
     /* Square to the ring: look straight down −Z from wherever we are. The
@@ -805,6 +853,12 @@ function LaneRig({ reduced, locale }: { reduced: boolean; locale: Locale }) {
 /* ----------------------------------------------------------------- scene */
 
 export function IntegrationsScene({ reduced, locale }: SceneEnv) {
+  /* From the locale, not `scroll.rtl`: that flag is published by an effect, so
+     on the first render — the one that decides the ring's handedness — it is
+     still stale, and the ring would build the wrong way round and then jump. */
+  const mirror = isRtl(locale) ? -1 : 1;
+  const spokes = spokeSet(mirror);
+  const ticks = spokeTickSet(mirror);
   const laneMats = useRef<(THREE.LineBasicMaterial | null)[]>([]);
   /** How much of each spoke the story has opened, 0 → 1. Shared with the docs. */
   const reach = useRef(AUTHORITIES.map(() => 0));
@@ -837,7 +891,7 @@ export function IntegrationsScene({ reduced, locale }: SceneEnv) {
 
   return (
     <>
-      {SPOKE_TICKS.map((g, i) => (
+      {ticks.map((g, i) => (
         <lineSegments key={AUTHORITIES[i].id} geometry={g} frustumCulled={false}>
           <lineBasicMaterial
             ref={(m) => {
@@ -851,9 +905,15 @@ export function IntegrationsScene({ reduced, locale }: SceneEnv) {
       ))}
 
       <Hub reduced={reduced} />
-      <Documents reduced={reduced} reach={reach} />
+      <Documents reduced={reduced} reach={reach} spokes={spokes} />
       {AUTHORITIES.map((a, i) => (
-        <Gate key={a.id} index={i} locale={locale} reduced={reduced} />
+        <Gate
+          key={a.id}
+          index={i}
+          locale={locale}
+          reduced={reduced}
+          mirror={mirror}
+        />
       ))}
 
       <LaneRig reduced={reduced} locale={locale} />
