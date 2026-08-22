@@ -78,7 +78,19 @@ export default async function RootLayout({
       dir={dirOf(lang)}
       className={`${inter.variable} ${plexArabic.variable}`}
     >
-      <body>
+      {/* Extensions get to the body before React does.
+
+          Grammarly stamps `data-gr-ext-installed` and
+          `data-new-gr-c-s-check-loaded` onto <body> as soon as the document
+          parses, which is before hydration — so React compares its own render
+          against markup a third party has already edited and reports a
+          mismatch on every page load for anyone who has it installed. Nothing
+          in this element is ours to fix: it carries no attributes at all.
+
+          The suppression is one level deep by design — it covers this
+          element's own attributes and nothing below it, so a real mismatch
+          anywhere in the app still reports. */}
+      <body suppressHydrationWarning>
         <LocaleProvider locale={lang}>{children}</LocaleProvider>
       </body>
     </html>
