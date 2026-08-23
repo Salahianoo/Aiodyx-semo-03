@@ -215,6 +215,25 @@ type Tower = {
   setback?: { h: number; inset: number };
   /** Mast rising above the highest roof; its tip carries a beacon. */
   spire?: number;
+  /**
+   * A void cut through the upper section, bridged across the top.
+   *
+   * One building here is a real one — see `KINGDOM_CENTRE`. Expressed as a
+   * modifier on the same spec as `setback` and `spire` rather than as its own
+   * mesh, so the landmark is still a box with a facade on it like every other
+   * tower and inherits the window pitch, the tint and the reveal for free.
+   *
+   * Fractions of `h` and `w`, not absolute units, so the shape survives the
+   * building being resized.
+   */
+  arch?: {
+    /** Where the void starts, up the tower. */
+    from: number;
+    /** How much of the tower it spans. */
+    span: number;
+    /** Each leg's width, as a share of the full width. */
+    leg: number;
+  };
 };
 
 /**
@@ -222,7 +241,10 @@ type Tower = {
  * the edges so the cluster meets the ground instead of ending in a cliff.
  *
  * Tallest total is 0.34 + 0.11 + 0.05 = 0.50, which is the roofline <Marker>
- * assumes when it parks the city label at 0.62.
+ * assumes when it parks the city label at 0.62. `KINGDOM_CENTRE` is built to
+ * exactly that height for the same reason.
+ *
+ * This is the generic list, and Amman's. Riyadh takes `RIYADH_TOWERS`.
  */
 const TOWERS: Tower[] = [
   { x: 0.0, z: 0.0, w: 0.03, d: 0.026, h: 0.34, rot: 0.2, seed: 1, setback: { h: 0.11, inset: 0.62 }, spire: 0.05 },
@@ -244,6 +266,51 @@ const TOWERS: Tower[] = [
   { x: -0.052, z: -0.128, w: 0.02, d: 0.016, h: 0.08, rot: 1.25, seed: 17 },
   { x: 0.036, z: 0.148, w: 0.017, d: 0.019, h: 0.05, rot: 0.42, seed: 18 },
 ];
+
+/**
+ * Riyadh's core tower is the Kingdom Centre.
+ *
+ * The one real building in either city. Everything else here is a deterministic
+ * downtown that says "a city" without claiming to be one; this says *Riyadh*,
+ * which is the point of the beat it stands under — we have an office there.
+ *
+ * A thin slab, and it has to be thin. The blocks around it are nearly square
+ * in plan, and at that depth the far leg's inner wall fills the opening from
+ * any angle but dead-on — the hole came out a slot. The void has to be wider
+ * than the building is deep or it does not read as a hole at all, which is the
+ * one thing this building is.
+ *
+ * Built to 0.5 total, matching the tallest tower it replaces, so the roofline
+ * the callout geometry assumes does not move.
+ *
+ * The arch is square-shouldered where the real one is a parabola. At the size
+ * this renders — the whole tower is about a fiftieth of the globe's radius —
+ * what identifies the building is that there is a hole through the top of it
+ * with a bridge over it, not the curve of the hole.
+ */
+const KINGDOM_CENTRE: Tower = {
+  x: 0,
+  z: 0,
+  // Wider than its neighbours, which is both true of the building and what the
+  // void needs: these towers are drawn about twice as slender as real ones, and
+  // on a 0.03-wide needle an opening in correct proportion comes out as a slot
+  // between two paper legs.
+  w: 0.052,
+  d: 0.012,
+  h: 0.5,
+  // Turned to face the camera at the beat that stops here, rather than to break
+  // up the grid like the others. This one has a front, and the arch is only an
+  // arch from it — a quarter-turn off and the far leg's inner wall closes the
+  // hole up into a slit.
+  rot: 1.2,
+  seed: 1,
+  arch: { from: 0.7, span: 0.17, leg: 0.19 },
+};
+
+/** Amman keeps the generic downtown; Riyadh gets its landmark in the core. */
+const RIYADH_TOWERS: Tower[] = TOWERS.map((t) =>
+  t.seed === KINGDOM_CENTRE.seed ? KINGDOM_CENTRE : t,
+);
 
 /** Window size in local units. Constant across every tower — that's the point. */
 const WINDOW_PITCH = new THREE.Vector2(0.0062, 0.0104);
@@ -429,6 +496,19 @@ function facade(accent: string) {
   return m;
 }
 
+/**
+ * The lit soffit under the Kingdom Centre's bridge.
+ *
+ * Not keyed by city, unlike every other material here: it is the same gold in
+ * Riyadh as it would be anywhere, because it is a property of the building
+ * rather than of the plot it stands on — and only one city has one.
+ *
+ * Unlit on purpose. Everything that reads as *light* in these cities is basic
+ * material plus bloom; shading it would make it a gold-painted panel instead.
+ */
+const SOFFIT = new THREE.MeshBasicMaterial({ color: "#FFC46B" });
+const soffit = () => SOFFIT;
+
 const MASTS = new Map<string, THREE.MeshBasicMaterial>();
 
 function mast(accent: string) {
@@ -516,10 +596,12 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 function Skyline({
   at,
   color,
+  towers,
   groupRef,
 }: {
   at: THREE.Vector3;
   color: string;
+  towers: Tower[];
   groupRef: React.RefObject<THREE.Group | null>;
 }) {
   // Orient the plot so "up" for the buildings is the globe's surface normal
@@ -547,11 +629,51 @@ function Skyline({
         <circleGeometry args={[0.21, 48]} />
       </mesh>
 
-      {TOWERS.map((b) => {
+      {towers.map((b) => {
         const roof = b.h + (b.setback?.h ?? 0);
+
+        /* Split into body, two legs and a bridge. The window grid restarts at
+           each section's base — the same thing `setback` relies on — and since
+           the pitch is constant the rows stay the same height throughout, so
+           the seam reads as a floor line rather than as a join. */
+        const arch = b.arch;
+        const bodyH = arch ? b.h * arch.from : b.h;
+        const legH = arch ? b.h * arch.span : 0;
+        const legW = arch ? b.w * arch.leg : 0;
+        const bridgeH = arch ? b.h - bodyH - legH : 0;
+
         return (
           <group key={b.seed} position={[b.x, 0, b.z]} rotation={[0, b.rot, 0]}>
-            <mesh geometry={section(b.w, b.h, b.d, b.seed)} material={facade(color)} />
+            <mesh geometry={section(b.w, bodyH, b.d, b.seed)} material={facade(color)} />
+
+            {arch && (
+              <>
+                {[-1, 1].map((s) => (
+                  <mesh
+                    key={s}
+                    position={[(s * (b.w - legW)) / 2, bodyH, 0]}
+                    geometry={section(legW, legH, b.d, b.seed + s * 0.11)}
+                    material={facade(color)}
+                  />
+                ))}
+                <mesh
+                  position={[0, bodyH + legH, 0]}
+                  geometry={section(b.w, bridgeH, b.d, b.seed + 0.53)}
+                  material={facade(color)}
+                />
+                {/* The lit soffit over the void — the one thing in either city
+                    that is warm rather than the city's own hue. It is what the
+                    building is recognised by, and the palette already carries
+                    the colour for the warm rooms scattered through the
+                    facades, so it is not a new one. */}
+                <mesh
+                  position={[0, bodyH + legH - 0.0016, 0]}
+                  material={soffit()}
+                >
+                  <boxGeometry args={[b.w - legW * 2, 0.0032, b.d * 1.02]} />
+                </mesh>
+              </>
+            )}
 
             {/* The setback restarts the window grid at its own base, which is
                 how a real stepped tower reads. */}
@@ -1097,8 +1219,18 @@ function Globe({
 
       <primitive object={ROUTE_LINE} />
 
-      <Skyline at={ammanPos} color={CITY_COLORS.amman} groupRef={ammanCity} />
-      <Skyline at={riyadhPos} color={CITY_COLORS.riyadh} groupRef={riyadhCity} />
+      <Skyline
+        at={ammanPos}
+        color={CITY_COLORS.amman}
+        towers={TOWERS}
+        groupRef={ammanCity}
+      />
+      <Skyline
+        at={riyadhPos}
+        color={CITY_COLORS.riyadh}
+        towers={RIYADH_TOWERS}
+        groupRef={riyadhCity}
+      />
 
       {/* Each callout stands opposite its own copy column. <StoryOverlay>
           alternates the text by beat index — amman is odd so its copy sits
