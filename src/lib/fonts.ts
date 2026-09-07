@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n";
+import { asset } from "@/lib/asset";
 
 /**
  * The font troika loads for 3D labels.
@@ -17,7 +18,7 @@ import type { Locale } from "@/lib/i18n";
  * label on this site has always used.
  */
 export const arabicFontUrl = (locale: Locale): string | undefined =>
-  locale === "ar" ? "/fonts/ibm-plex-sans-arabic-600.ttf" : undefined;
+  locale === "ar" ? asset("/fonts/ibm-plex-sans-arabic-600.ttf") : undefined;
 
 /**
  * Arabic has no capitals, so `toUpperCase()` is a no-op there — but the

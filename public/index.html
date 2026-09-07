@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>AIODYX</title>
+<!--
+  The locale gate, for the static build only.
+
+  `src/proxy.ts` does this on the server: cookie first, then Accept-Language,
+  then the default. GitHub Pages has no server, so the root would 404 — the
+  export writes `en/` and `ar/` and nothing at `/`. This stands in for it.
+
+  Every URL here is relative, so it works whether the site is served from a
+  domain root or from a repository subdirectory.
+
+  The meta refresh is the fallback for a visitor with JavaScript off, and it
+  points at English rather than guessing; the script below overrides it when it
+  can do better. Same order of preference as the proxy, so a returning visitor
+  who chose Arabic lands on Arabic here too.
+-->
+<meta http-equiv="refresh" content="1; url=./en/">
+<link rel="canonical" href="./en/">
+<script>
+  (function () {
+    var LOCALES = ["en", "ar"];
+    function pick() {
+      var m = document.cookie.match(/(?:^|;\s*)aiodyx-locale=([^;]+)/);
+      if (m && LOCALES.indexOf(m[1]) !== -1) return m[1];
+      var langs = navigator.languages || [navigator.language || ""];
+      for (var i = 0; i < langs.length; i++) {
+        // `ar-JO` and `ar-SA` are both Arabic to us, same as the proxy.
+        var tag = String(langs[i]).toLowerCase().split("-")[0];
+        if (LOCALES.indexOf(tag) !== -1) return tag;
+      }
+      return "en";
+    }
+    // `replace`, not `assign`: the gate should not sit in the back button
+    // between the visitor and wherever they came from.
+    location.replace("./" + pick() + "/");
+  })();
+</script>
+<p>Continue to <a href="./en/">AIODYX</a>.</p>

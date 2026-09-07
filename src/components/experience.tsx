@@ -8,6 +8,7 @@ import { useLocale } from "@/components/providers";
 import { StoryPage } from "@/components/story-page";
 import { HomeScene } from "@/components/scene/home-scene";
 import { buildBeats } from "@/lib/story";
+import { asset } from "@/lib/asset";
 import { t } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
 
@@ -34,7 +35,7 @@ function Intro({ locale }: { locale: Locale }) {
       <span className="trust__odoo">
         <span>{t(locale, "trust.built_on", "Built on")}</span>
         <Image
-          src="/odoo-logo.svg"
+          src={asset("/odoo-logo.svg")}
           alt="Odoo"
           width={631}
           height={207}

@@ -954,3 +954,34 @@ camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.
   but no page passes the prop and `StoryPage` never accepted one. Services is
   running the default weight against a scene of thin bright lines, which is the
   case the variant was written for. Either wire it or delete the rules.
+
+
+## Deploying to GitHub Pages
+
+`.github/workflows/pages.yml` builds the site and publishes it on every push to
+`main`, and can be re-run by hand from the Actions tab.
+
+**This site is a server app in normal use, and Pages is not a server.** Setting
+`GITHUB_PAGES=true` flips `next.config.ts` into `output: export`, which is a
+different build with real consequences:
+
+- **`src/proxy.ts` does not run.** It is what puts a bare `/` on a locale path
+  by cookie and `Accept-Language`. The export writes `en/` and `ar/` and nothing
+  at the root, so `public/index.html` stands in for it — the same order of
+  preference, decided in the browser instead. It is only reachable in the static
+  build; every other host uses the proxy.
+- **`/api/contact` does not exist.** The form posts, gets the 404 page back, and
+  shows its error note. Nothing is actually lost — the route is a stub that logs
+  and delivers nothing — but it looks broken to anyone who tries it. Wire the
+  route to a real service *and* move off Pages before pointing a customer here.
+- **The site is served from a subdirectory** (`/Aiodyx-semo-03`), so the build
+  sets `basePath`. Next rewrites its own asset URLs for that, but not paths
+  written by hand: `next/image` marked `unoptimized` is passed through verbatim,
+  and neither is a font URL handed to troika. Both go through `lib/asset.ts`.
+  Anything new pointing into `public/` must too, or it will 404 on Pages and
+  work fine everywhere else — which is the worst way for it to fail.
+
+None of this touches `next dev` or a plain `next build`; the Pages branch of the
+config is off unless the env var is set. For a deployment where the form and the
+locale redirect actually work, host it somewhere that runs Node — the same repo
+deploys to Vercel with no configuration at all.

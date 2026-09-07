@@ -1,0 +1,65 @@
+# Builds the site as static files and publishes them to GitHub Pages.
+#
+# The app is a Next.js server app in normal use — `src/proxy.ts` picks a locale
+# per request and `/api/contact` is a route handler. Pages serves files and
+# nothing else, so `GITHUB_PAGES=true` switches next.config.ts to
+# `output: export`. What that costs is written up in the README section on
+# deployment; the short version is that the contact form has no endpoint to
+# post to, and `public/index.html` stands in for the locale redirect.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # So a deploy can be re-run from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it — a half-published site
+# is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` over `npm install`: the lockfile is the point of a CI build.
+      - run: npm ci
+
+      - name: Build static export
+        run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+
+      # `enablement` turns Pages on for the repo if it is still off, so the
+      # first run does not need anyone to visit Settings first.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
