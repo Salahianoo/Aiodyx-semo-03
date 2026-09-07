@@ -44,11 +44,15 @@ jobs:
         env:
           GITHUB_PAGES: "true"
 
-      # `enablement` turns Pages on for the repo if it is still off, so the
-      # first run does not need anyone to visit Settings first.
+      # Pages must already be switched on for the repository, under
+      # Settings -> Pages -> Source: "GitHub Actions". This step reads that
+      # configuration; it cannot create it.
+      #
+      # It used to pass `enablement: true`, which asks the API to turn Pages on.
+      # A workflow's default GITHUB_TOKEN has no repo-admin scope, so that call
+      # is refused and the whole build fails after a successful export — see the
+      # deployment section of the README.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

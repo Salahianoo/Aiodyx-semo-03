@@ -961,6 +961,13 @@ camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.
 `.github/workflows/pages.yml` builds the site and publishes it on every push to
 `main`, and can be re-run by hand from the Actions tab.
 
+**Pages has to be switched on for the repository once, by hand**, under
+Settings -> Pages -> Source: **GitHub Actions**. The workflow reads that
+configuration and cannot create it: `actions/configure-pages` will turn Pages on
+if asked, but only with a token carrying repo-admin scope, and a workflow's
+default `GITHUB_TOKEN` does not have it. Until that switch is thrown, the build
+and the export succeed and the run fails at the configure step.
+
 **This site is a server app in normal use, and Pages is not a server.** Setting
 `GITHUB_PAGES=true` flips `next.config.ts` into `output: export`, which is a
 different build with real consequences:
