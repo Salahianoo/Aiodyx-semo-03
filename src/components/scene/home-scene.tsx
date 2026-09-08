@@ -681,10 +681,14 @@ function buildField(): Field {
       // so scaling them by the same number squares up a mark that is nearly
       // five times wider than it is tall. The height carries the aspect.
       pos[MARK][k] = mx * MARK_W;
-      // Raised from −4.1 once the closing copy gave up its bottom padding.
-      // At −4.1 the mark sat flush against the bottom edge of the frame with
-      // five pixels to spare and its top overlapping the working-week line.
-      pos[MARK][k + 1] = my * MARK_W * MARK_AR - 3.5;
+      /* −4.1 sat the mark flush against the bottom edge with five pixels to
+         spare; −3.5 was the answer once the closing copy gave up its bottom
+         padding. It went back down when Jordan's card grew from one number to
+         three — the block got two lines taller and the mark's top came up
+         under the working-week line again, which is the exact failure the
+         −4.1 note describes. Between the two: clear of the copy, still off the
+         bottom edge. */
+      pos[MARK][k + 1] = my * MARK_W * MARK_AR - 3.92;
       pos[MARK][k + 2] = gauss() * 0.2;
     } else {
       // Only reachable if the canvas refused a 2D context. A shell is a

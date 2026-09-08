@@ -960,9 +960,16 @@
       "subtitle": "Offices in Jordan and Saudi Arabia — serving clients across the region.",
       "jordan": {
         "country": "Jordan",
+        "city": "Amman",
         "address": "Zahran St 34, Amman, Jordan",
-        "phone": "+962 7 7599 9908",
-        "city": "Amman"
+        "branch": "Zahran St",
+        "phone": "+962 6 222 7604",
+        "address_2": "505 Al-Arab Street, Shafa Badran",
+        "branch_2": "Shafa Badran",
+        "phone_2": "+962 6 516 4330",
+        "landline_label": "Landline",
+        "secretary_label": "Secretary",
+        "secretary": "+962 7 7599 9908"
       },
       "saudi": {
         "country": "Saudi Arabia",
@@ -970,7 +977,7 @@
         "phone": "+966 56 344 7279",
         "city": "Riyadh"
       },
-      "hours": "Sun–Thu: 8 AM – 4 PM · Fri & Sat: Closed"
+      "hours": "Sun–Thu: 8 AM – 4 PM"
     },
     "media": {
       "eyebrow": "Connect With Us",
@@ -1036,14 +1043,9 @@
       "phone_label": "Phone",
       "email_label": "Email",
       "hours_label": "Business Hours",
-      "hours": "Sun–Thu: 8 AM – 4 PM · Fri & Sat: Closed",
       "whatsapp_label": "WhatsApp",
       "office_jordan": "Jordan Office",
       "office_sa": "Saudi Arabia Office",
-      "address_jordan": "Zahran St 34, Amman, Jordan",
-      "address_sa": "Murabba 6479, Riyadh, Saudi Arabia",
-      "phone_jordan": "+962 7 7599 9908",
-      "phone_sa": "+966 56 344 7279",
       "social_label": "Follow Us",
       "map_text": "Visit us",
       "map_directions": "Open in Google Maps",

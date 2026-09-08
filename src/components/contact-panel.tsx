@@ -8,6 +8,7 @@ import { useLocale } from "@/components/providers";
 import { usePrefersReducedMotion } from "@/components/story-page";
 import { useLenis } from "@/lib/scroll";
 import { t } from "@/lib/content";
+import { offices, telHref } from "@/lib/offices";
 
 const Stage = dynamic(
   () => import("@/components/scene/stage").then((m) => m.Stage),
@@ -28,18 +29,12 @@ type Errors = Partial<Record<string, string>>;
  * it in whichever language happened to load first and left the Arabic page
  * showing English offices.
  */
-const OFFICE_KEYS = ["jordan", "sa"] as const;
-
 export function ContactPanel() {
   const reduced = usePrefersReducedMotion();
   const locale = useLocale();
   useLenis(!reduced);
 
-  const offices = OFFICE_KEYS.map((k) => ({
-    name: t(locale, `contact.info.office_${k}`),
-    address: t(locale, `contact.info.address_${k}`),
-    phone: t(locale, `contact.info.phone_${k}`),
-  }));
+  const directory = offices(locale);
 
   const [status, setStatus] = useState<Status>("idle");
   const [errors, setErrors] = useState<Errors>({});
@@ -168,25 +163,34 @@ export function ContactPanel() {
           <aside className="panel panel--quiet">
             <h2 className="panel__title">{t(locale, "contact.info.title")}</h2>
             <ul className="offices">
-              {offices.map((o) => (
-                <li key={o.name}>
-                  <p className="offices__name">{o.name}</p>
-                  <p className="offices__line">{o.address}</p>
-                  {/* A phone number is read left-to-right in both languages;
-                      without this the leading "+" is reordered to the far end
-                      inside an RTL paragraph. */}
-                  <a
-                    className="offices__link"
-                    href={`tel:${o.phone.replace(/\s/g, "")}`}
-                    dir="ltr"
-                  >
-                    {o.phone}
-                  </a>
+              {directory.map((o) => (
+                <li key={o.key}>
+                  <p className="offices__name">{o.country}</p>
+                  {o.branches.map((br) => (
+                    <div key={br.address} className="offices__branch">
+                      <p className="offices__line">{br.address}</p>
+                      {/* A phone number is read left-to-right in both
+                          languages; without this the leading "+" is reordered
+                          to the far end inside an RTL paragraph. */}
+                      <a className="offices__link" href={telHref(br.phone)} dir="ltr">
+                        {br.phone}
+                      </a>
+                      {br.label && <span className="offices__tag">{br.label}</span>}
+                    </div>
+                  ))}
+                  {o.extra && (
+                    <div className="offices__branch">
+                      <a className="offices__link" href={telHref(o.extra.phone)} dir="ltr">
+                        {o.extra.phone}
+                      </a>
+                      <span className="offices__tag">{o.extra.label}</span>
+                    </div>
+                  )}
                 </li>
               ))}
               <li>
                 <p className="offices__name">{t(locale, "contact.info.hours_label")}</p>
-                <p className="offices__line">{t(locale, "contact.info.hours")}</p>
+                <p className="offices__line">{t(locale, "about.locations.hours")}</p>
               </li>
               <li>
                 <p className="offices__name">{t(locale, "contact.info.email_label")}</p>

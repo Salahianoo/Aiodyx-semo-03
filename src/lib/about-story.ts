@@ -71,8 +71,19 @@ export function buildAboutBeats(locale: Locale): Beat[] {
       to: 0.91,
       kicker: t(locale, "about.locations.eyebrow"),
       title: t(locale, "about.locations.jordan.country"),
-      body: t(locale, "about.locations.jordan.address"),
-      points: [t(locale, "about.locations.jordan.phone")],
+      /* Two addresses in Amman now. The full directory — which line rings
+         where — is on the contact page; this beat says where we are and gives
+         the number a visitor should actually call, plus each branch's own
+         landline named by its street so the two are not interchangeable. */
+      body: [
+        t(locale, "about.locations.jordan.address"),
+        t(locale, "about.locations.jordan.address_2"),
+      ].join(" · "),
+      points: [
+        `${t(locale, "about.locations.jordan.branch")} · ${t(locale, "about.locations.jordan.phone")}`,
+        `${t(locale, "about.locations.jordan.branch_2")} · ${t(locale, "about.locations.jordan.phone_2")}`,
+        `${t(locale, "about.locations.jordan.secretary_label")} · ${t(locale, "about.locations.jordan.secretary")}`,
+      ],
     },
     {
       id: "riyadh",

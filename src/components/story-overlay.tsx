@@ -19,6 +19,47 @@ import type { Beat } from "@/lib/story";
  * Like any rAF work this pauses in a background tab, which is correct: there
  * is nothing to reveal to someone who isn't looking.
  */
+/**
+ * A run of digits and the punctuation that belongs to a number.
+ *
+ * Deliberately anchored on digits at both ends so it cannot swallow the
+ * spaces or brackets around ordinary words.
+ */
+const NUMERIC = /[+(]?\d[\d\s()+-]*\d|\d/g;
+
+/**
+ * Render text with its numbers isolated left-to-right.
+ *
+ * A run with no letters in it has no direction of its own, so the paragraph
+ * decides — and under Arabic that reverses a phone number: "+962 6 222 7604"
+ * came out as "7604 222 6 962+", with the plus thrown to the far end. It bites
+ * whether the number stands alone in a pill or sits after a label, and these
+ * strings are assembled from the dictionary, so the markup cannot know which
+ * is which.
+ *
+ * `<bdi>` is exactly the element for this: it isolates its contents from the
+ * surrounding bidi context, so the number reads correctly and the Arabic
+ * around it still runs right-to-left.
+ */
+function withNumbers(text: string) {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(NUMERIC)) {
+    const at = m.index ?? 0;
+    if (at > last) parts.push(text.slice(last, at));
+    parts.push(
+      <bdi key={at} dir="ltr">
+        {m[0]}
+      </bdi>,
+    );
+    last = at + m[0].length;
+  }
+  if (!parts.length) return text;
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+
 export function StoryOverlay({
   beats,
   align = "alternate",
@@ -140,26 +181,11 @@ export function StoryOverlay({
             >
               {b.kicker && <p className="beat__kicker">{b.kicker}</p>}
               <h2 className="beat__title">{b.title}</h2>
-              {b.body && <p className="beat__body">{b.body}</p>}
+              {b.body && <p className="beat__body">{withNumbers(b.body)}</p>}
               {b.points && (
                 <ul className="beat__points">
                   {b.points.map((p) => (
-                    /* A string with no letters in it has no direction of its
-                       own, so the paragraph decides — and under Arabic that
-                       runs a phone number backwards: "+962 7 7599 9908" came
-                       out as "9908 7599 7 962+", with the plus reordered to
-                       the far end. The contact and home pages already pin
-                       their numbers with `dir="ltr"`; these arrive through the
-                       generic points list, which had no way to know.
-
-                       Keyed off "has no letters" rather than "looks like a
-                       phone number", because that is the actual condition: a
-                       letter-free run is what bidi has no answer for. Every
-                       other point on every page is prose and keeps the
-                       paragraph's direction. */
-                    <li key={p} dir={/\p{L}/u.test(p) ? undefined : "ltr"}>
-                      {p}
-                    </li>
+                    <li key={p}>{withNumbers(p)}</li>
                   ))}
                 </ul>
               )}

@@ -10,6 +10,7 @@ import { HomeScene } from "@/components/scene/home-scene";
 import { buildBeats } from "@/lib/story";
 import { asset } from "@/lib/asset";
 import { t } from "@/lib/content";
+import { offices, telHref } from "@/lib/offices";
 import type { Locale } from "@/lib/i18n";
 
 /**
@@ -26,8 +27,6 @@ import type { Locale } from "@/lib/i18n";
  * worse than no marker, because the visitor who checks it stops believing the
  * rest of the page too.
  */
-
-const OFFICES = ["jordan", "saudi"] as const;
 
 function Intro({ locale }: { locale: Locale }) {
   return (
@@ -57,23 +56,36 @@ function Intro({ locale }: { locale: Locale }) {
 function Offices({ locale }: { locale: Locale }) {
   return (
     <div className="offices">
-      {OFFICES.map((o) => (
-        <div key={o} className="offices__card">
-          <p className="offices__country">
-            {t(locale, `about.locations.${o}.country`)}
-          </p>
-          <p className="offices__line">
-            {t(locale, `about.locations.${o}.address`)}
-          </p>
-          <a
-            className="offices__line offices__tel"
-            // The number itself always stays Latin-digit and LTR: `tel:` is a
-            // protocol, not prose, and the dialler gets the raw string.
-            href={`tel:${t(locale, `about.locations.${o}.phone`).replace(/\s/g, "")}`}
-            dir="ltr"
-          >
-            {t(locale, `about.locations.${o}.phone`)}
-          </a>
+      {offices(locale).map((o) => (
+        <div key={o.key} className="offices__card">
+          <p className="offices__country">{o.country}</p>
+          {o.branches.map((br) => (
+            <div key={br.address} className="offices__branch">
+              <p className="offices__line">{br.address}</p>
+              <a
+                className="offices__line offices__tel"
+                // The number itself always stays Latin-digit and LTR: `tel:` is
+                // a protocol, not prose, and the dialler gets the raw string.
+                href={telHref(br.phone)}
+                dir="ltr"
+              >
+                {br.phone}
+              </a>
+              {br.label && <span className="offices__tag">{br.label}</span>}
+            </div>
+          ))}
+          {o.extra && (
+            <div className="offices__branch">
+              <a
+                className="offices__line offices__tel"
+                href={telHref(o.extra.phone)}
+                dir="ltr"
+              >
+                {o.extra.phone}
+              </a>
+              <span className="offices__tag">{o.extra.label}</span>
+            </div>
+          )}
         </div>
       ))}
       <p className="offices__hours">{t(locale, "about.locations.hours")}</p>
