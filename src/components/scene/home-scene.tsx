@@ -795,6 +795,24 @@ const UNIFORMS = {
   uSpread: { value: 1 },
   /** How far along the sweep the cloud has travelled, sign included. */
   uShift: { value: 0 },
+  /**
+   * Where the copy column is, in normalised device coordinates, and which side.
+   *
+   * The field is meant to gather from the half of the frame the column is not
+   * using — but "meant to" was doing the work: the funnel's tail reached across
+   * the middle and laid particles over the headline, twice as badly on Arabic
+   * as on English because only some formations are mirrored. Rather than chase
+   * every formation's handedness, the field now fades where the text actually
+   * is, measured in screen space after projection, which is the one place the
+   * question has a definite answer.
+   *
+   * `uCopySide` is -1 when the column reads left, +1 when it reads right, 0
+   * when it is centred and there is no free half to gather into.
+   */
+  uCopyEdge: { value: 1 },
+  uCopySide: { value: 0 },
+  /** How far down the field goes under the column. 0 disables the fade. */
+  uCopyFade: { value: 0 },
   /** +1 while the copy reads left-to-right, −1 when it reads right-to-left. */
   uMirror: { value: 1 },
   /**
@@ -916,6 +934,9 @@ const MATERIAL = new THREE.ShaderMaterial({
     uniform float uSpin;
     uniform float uSpread;
     uniform float uShift;
+    uniform float uCopyEdge;
+    uniform float uCopySide;
+    uniform float uCopyFade;
     uniform float uMirror;
     uniform vec3 uCluster[${CLUSTERS}];
 
@@ -1052,7 +1073,22 @@ const MATERIAL = new THREE.ShaderMaterial({
       float dim = mix(1.0, 0.28, uFocusAmt * (1.0 - mine));
       // Clamped: normal blending needs more coverage per point than additive,
       // but coverage above 1 is not a thing.
-      vAlpha = min(dim * uAlpha * uAlphaScale * (1.0 + lit * 0.5), 1.0);
+      /* Screen-space, so it does not care which formation a point came from,
+         whether that formation is mirrored, or what the camera is doing — only
+         where the point actually lands relative to the words.
+
+         The ramp starts a little before the column's edge and is soft, so the
+         field thins toward the text instead of stopping at a line, which would
+         read as a rectangular hole cut in the cloud. */
+      float ndcX = gl_Position.x / max(gl_Position.w, 0.0001);
+      float intoCopy = smoothstep(
+        uCopyEdge - 0.30,
+        uCopyEdge + 0.06,
+        ndcX * uCopySide
+      );
+      float legible = mix(1.0, 0.12, intoCopy * uCopyFade);
+
+      vAlpha = min(dim * uAlpha * uAlphaScale * (1.0 + lit * 0.5), 1.0) * legible;
 
       gl_PointSize = uSize * uSizeMul * (1.0 + lit * 0.5) * (42.0 / max(-mv.z, 0.001));
     }
@@ -1350,6 +1386,60 @@ function Field({ reduced, locale }: SceneEnv) {
     );
     UNIFORMS.uMirror.value = sideSign();
     UNIFORMS.uShift.value = sweep * SCATTER_SWEEP * sideSign();
+
+    /**
+     * Where the copy column is right now, for the legibility fade.
+     *
+     * <StoryOverlay> alternates by beat index and centres the first and last,
+     * and `flex-start` is the *right*-hand side under Arabic — so the side is
+     * the beat's parity times the reading direction, exactly as the module
+     * tour's own `side` above computes it.
+     *
+     * Blended across a transition rather than switched: two beats mid-fade sit
+     * on opposite sides, the signed sum passes through zero, and the fade
+     * lifts while both columns are half-there instead of snapping across.
+     */
+    const beats = list.current;
+    let sideSum = 0;
+    let sideW = 0;
+    for (let i = 1; i < beats.length - 1; i++) {
+      const o = owns(p, beats[i].id, 0.3);
+      if (o <= 0) continue;
+      sideSum += (i % 2 === 0 ? -1 : 1) * sideSign() * o;
+      sideW += o;
+    }
+    const signed = sideW > 0 ? sideSum / sideW : 0;
+
+    /* The column is `max-w-xl` inside the section's own padding — the same two
+       numbers the overlay's classes use. Read from the canvas rather than the
+       window so it stays right if the scene is ever not full-bleed. */
+    const vw = Math.max(state.size.width, 1);
+    const pad = vw >= 640 ? 40 : 24;
+    const col = Math.min(576, vw - pad * 2);
+    /* In NDC, measured from the column's own edge inward. Above this, a point
+       is over the text. */
+    const edge = 1 - (2 * (pad + col)) / vw;
+
+    UNIFORMS.uCopyEdge.value = edge;
+    UNIFORMS.uCopySide.value = signed >= 0 ? 1 : -1;
+    /* Narrow viewports have no free half — the column fills the width, so the
+       fade would erase the field rather than move it. There it becomes a
+       wash instead: enough that the words win, not so much that the page
+       loses the thing it is made of. */
+    const roomy = edge > -0.1;
+    /* Stood down during the module tour. There the camera already parks the
+       field on the far side of the frame from its copy, so the fade has nothing
+       left to protect — and a module scene is a drawing, not a cloud: a ramp
+       across it dims one side of the figure and reads as a lighting bug. */
+    UNIFORMS.uCopyFade.value = damp(
+      UNIFORMS.uCopyFade.value,
+      Math.abs(signed) *
+        clamp(sideW, 0, 1) *
+        (roomy ? 1 : 0.62) *
+        (1 - w[MODULE] * 0.85),
+      4,
+      dt,
+    );
 
     UNIFORMS.uFocus.value = focus;
     // The focus highlight lights one cluster in ten by `aCluster`, which is

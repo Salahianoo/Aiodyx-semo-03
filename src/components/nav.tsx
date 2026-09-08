@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 import { Wordmark } from "@/components/brand";
 import { useLocale } from "@/components/providers";
@@ -29,9 +30,38 @@ const LINKS = [
 export function Nav() {
   const pathname = usePathname();
   const locale = useLocale();
+  const bar = useRef<HTMLElement>(null);
+
+  /**
+   * Publish the bar's own height as `--nav-h`.
+   *
+   * The bar is fixed and the beats centre their content vertically, so a beat
+   * taller than the screen slides up underneath it — the fix is top padding
+   * the size of the bar. But on narrow screens the bar's height is not a
+   * constant: the links take a second row, and whether they take a *third*
+   * depends on how wide the words are, which is a function of the language.
+   * English wraps where Arabic does not.
+   *
+   * A hard-coded padding is therefore either too small for English or too big
+   * for Arabic. Measuring is the only honest answer, and a ResizeObserver
+   * catches every cause at once — rotation, resize, font swap, locale change.
+   */
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const write = () =>
+      document.documentElement.style.setProperty(
+        "--nav-h",
+        `${Math.round(el.getBoundingClientRect().height)}px`,
+      );
+    write();
+    const ro = new ResizeObserver(write);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
-    <nav className="nav" aria-label="Primary">
+    <nav className="nav" aria-label="Primary" ref={bar}>
       <Link
         href={`/${locale}`}
         className="nav__brand"
