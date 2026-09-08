@@ -144,7 +144,22 @@ export function StoryOverlay({
               {b.points && (
                 <ul className="beat__points">
                   {b.points.map((p) => (
-                    <li key={p}>{p}</li>
+                    /* A string with no letters in it has no direction of its
+                       own, so the paragraph decides — and under Arabic that
+                       runs a phone number backwards: "+962 7 7599 9908" came
+                       out as "9908 7599 7 962+", with the plus reordered to
+                       the far end. The contact and home pages already pin
+                       their numbers with `dir="ltr"`; these arrive through the
+                       generic points list, which had no way to know.
+
+                       Keyed off "has no letters" rather than "looks like a
+                       phone number", because that is the actual condition: a
+                       letter-free run is what bidi has no answer for. Every
+                       other point on every page is prose and keeps the
+                       paragraph's direction. */
+                    <li key={p} dir={/\p{L}/u.test(p) ? undefined : "ltr"}>
+                      {p}
+                    </li>
                   ))}
                 </ul>
               )}
