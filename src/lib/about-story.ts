@@ -59,9 +59,13 @@ export function buildAboutBeats(locale: Locale): Beat[] {
       id: "ceo",
       from: 0.74,
       to: 0.86,
-      kicker: t(locale, "about.ceo.role"),
+      /* Name and role label the quote; the paragraph is just the paragraph.
+         The name used to hang off the end of the body behind an em dash, which
+         is the one dash on this site that was written in code rather than in
+         the dictionary — and the only one the Arabic pass could not reach. */
+      kicker: `${t(locale, "about.ceo.name")} · ${t(locale, "about.ceo.role")}`,
       title: t(locale, "about.ceo.quote"),
-      body: `${t(locale, "about.ceo.p1")} — ${t(locale, "about.ceo.name")}`,
+      body: t(locale, "about.ceo.p1"),
     },
     // Two stops on the ground. The camera leaves orbit and drops to street
     // level at each office before pulling back out for the close.
@@ -101,8 +105,12 @@ export function buildAboutBeats(locale: Locale): Beat[] {
       kicker: t(locale, "about.locations.eyebrow"),
       title: t(locale, "about.locations.title"),
       body: t(locale, "about.locations.hours"),
+      /* Every place you can walk into, including the second Jordan branch —
+         this beat is the one overview of where the company is, and Shafa
+         Badran was missing from it while having its own beat further up. */
       points: [
         t(locale, "about.locations.jordan.address"),
+        t(locale, "about.locations.jordan.address_2"),
         t(locale, "about.locations.saudi.address"),
       ],
     },
