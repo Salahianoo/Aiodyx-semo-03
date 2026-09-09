@@ -177,7 +177,15 @@ export function StoryOverlay({
           >
             <div
               className="beat__inner max-w-xl"
-              style={{ textAlign: centred ? "center" : "start" }}
+              /* `.beat__points` is a flex row that takes its alignment with
+                 `justify-content: inherit`, and `inherit` reads the *direct*
+                 parent — this element. Nothing set it here, so the pills fell
+                 back to `normal` (flex-start) even on a centred beat, and sat
+                 against one edge under a centred title. */
+              style={{
+                textAlign: centred ? "center" : "start",
+                justifyContent: centred ? "center" : "flex-start",
+              }}
             >
               {b.kicker && <p className="beat__kicker">{b.kicker}</p>}
               <h2 className="beat__title">{b.title}</h2>
