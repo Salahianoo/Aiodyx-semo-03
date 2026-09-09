@@ -253,60 +253,6 @@ body {
   pointer-events: auto;
 }
 
-/**
- * Narrow screens: the links get a row of their own.
- *
- * Five links, a wordmark and a language switch do not fit across 414px. The
- * bar is `space-between` with no wrap rule, so the list overflowed and broke
- * mid-item — "About" dropped onto a second line under "Integrations" while
- * "Contact" was pushed out of the bar entirely. A navigation that hides one of
- * its destinations is worse than one that takes an extra row.
- *
- * Two rows rather than a scroller: a horizontally scrollable strip is still a
- * hidden link until someone thinks to swipe it, which is the same failure with
- * an extra step. `order` puts the list last so the wordmark and the switch
- * keep the top row and stay where they were.
- */
-@media (max-width: 639px) {
-  .nav {
-    flex-wrap: wrap;
-    row-gap: 0.3rem;
-    /* Tighter side padding than the desktop bar: the row of links needs every
-       pixel of the width, and English runs wider than Arabic — "Integrations"
-       and "Contact" together are most of the budget. */
-    padding: 0.8rem 0.75rem 0.6rem;
-  }
-
-  .nav__list {
-    order: 3;
-    flex: 1 0 100%;
-    justify-content: center;
-    /* Wrapping is allowed as a last resort below ~360px. Clipping is not: an
-       overflowing `nowrap` row hid "Contact" off the right edge entirely,
-       which is the bug this block exists to fix. A second line is ugly; a
-       missing destination is broken. */
-    flex-wrap: wrap;
-    row-gap: 0;
-    gap: 0;
-  }
-
-  .nav__link {
-    padding: 0.28rem 0.3rem;
-    font-size: 0.7rem;
-    white-space: nowrap;
-  }
-
-  /* The bar is fixed and the beats centre their content vertically, so a beat
-     taller than the screen centres itself *up under* it — the kicker landed in
-     the middle of the links. `--nav-h` is the bar's measured height, published
-     by <Nav>, because it is not a constant here: the links take a second row,
-     and English takes a third where Arabic does not. The fallback covers the
-     first paint, before the observer has run. */
-  .beat {
-    padding-top: calc(var(--nav-h, 5.7rem) + 0.9rem);
-  }
-}
-
 .nav__brand {
   display: block;
   color: var(--paper);
@@ -390,6 +336,93 @@ body {
    three different pages. */
 .story--signed .beat[data-last="true"] {
   padding-bottom: clamp(6rem, 17vh, 11rem);
+}
+
+/**
+ * Narrow screens: the links get a row of their own.
+ *
+ * Five links, a wordmark and a language switch do not fit across 414px. The
+ * bar is `space-between` with no wrap rule, so the list overflowed and broke
+ * mid-item — "About" dropped onto a second line under "Integrations" while
+ * "Contact" was pushed out of the bar entirely. A navigation that hides one of
+ * its destinations is worse than one that takes an extra row.
+ *
+ * Two rows rather than a scroller: a horizontally scrollable strip is still a
+ * hidden link until someone thinks to swipe it, which is the same failure with
+ * an extra step. `order` puts the list last so the wordmark and the switch
+ * keep the top row and stay where they were.
+ */
+@media (max-width: 639px) {
+  .nav {
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+    /* Tighter side padding than the desktop bar: the row of links needs every
+       pixel of the width, and English runs wider than Arabic — "Integrations"
+       and "Contact" together are most of the budget. */
+    padding: 0.8rem 0.75rem 0.6rem;
+  }
+
+  .nav__list {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: center;
+    /* Wrapping is allowed as a last resort below ~360px. Clipping is not: an
+       overflowing `nowrap` row hid "Contact" off the right edge entirely,
+       which is the bug this block exists to fix. A second line is ugly; a
+       missing destination is broken. */
+    flex-wrap: wrap;
+    row-gap: 0;
+    gap: 0;
+  }
+
+  /* Small enough that all five fit one row on a 320px phone.
+     At 0.7rem/0.3rem they needed 1.02 rows in English, so "Contact" wrapped
+     alone onto a third line — a line that falls past the end of the bar's
+     scrim, where grey text lands straight on the hero logotype and disappears.
+     It was in the DOM and inside the viewport the whole time, which is why
+     every automated check called it present. */
+  .nav__link {
+    padding: 0.28rem 0.22rem;
+    font-size: 0.64rem;
+    white-space: nowrap;
+  }
+
+  /* The scrim holds across the whole bar rather than fading out inside it, and
+     the fade happens *below* the bar instead. Sizing the links to fit is what
+     stops the wrap; this is what stops a wrap from ever being invisible again —
+     bigger system text or a longer translation can still push a row down, and
+     it will have something behind it when it does. */
+  .nav {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--ink) 92%, transparent),
+      color-mix(in oklab, var(--ink) 84%, transparent)
+    );
+  }
+
+  .nav::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 1.6rem;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--ink) 84%, transparent),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  /* The bar is fixed and the beats centre their content vertically, so a beat
+     taller than the screen centres itself *up under* it — the kicker landed in
+     the middle of the links. `--nav-h` is the bar's measured height, published
+     by <Nav>, because it is not a constant here: the links take a second row,
+     and English takes a third where Arabic does not. The fallback covers the
+     first paint, before the observer has run. */
+  .beat {
+    padding-top: calc(var(--nav-h, 5.7rem) + 0.9rem);
+  }
 }
 
 /* ---------------------------------------------------------------- buttons */
