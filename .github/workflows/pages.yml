@@ -1,11 +1,11 @@
 # Builds the site as static files and publishes them to GitHub Pages.
 #
 # The app is a Next.js server app in normal use — `src/proxy.ts` picks a locale
-# per request and `/api/contact` is a route handler. Pages serves files and
-# nothing else, so `GITHUB_PAGES=true` switches next.config.ts to
-# `output: export`. What that costs is written up in the README section on
-# deployment; the short version is that the contact form has no endpoint to
-# post to, and `public/index.html` stands in for the locale redirect.
+# per request. Pages serves files and nothing else, so `GITHUB_PAGES=true`
+# switches next.config.ts to `output: export`. What that costs is written up in
+# the README section on deployment; the short version is that
+# `public/index.html` stands in for the locale redirect. The contact form is
+# fine either way — it posts straight to FormSubmit from the browser.
 name: Deploy to GitHub Pages
 
 on:

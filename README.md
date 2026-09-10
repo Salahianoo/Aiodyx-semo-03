@@ -946,8 +946,11 @@ camera forever. Releases need `beat(a,b) * (1 - beat(c,d))`.
   speaker's pass. It is complete and structurally correct — 796 keys, same
   shape as English — but the register of marketing copy is exactly the thing
   that survives translation worst. Read it before launch.
-- The contact API (`src/app/api/contact/route.ts`) is still a stub: it
-  validates, honeypots, and logs. It delivers nothing.
+- **The contact form posts to FormSubmit**, which forwards it by email. Two
+  consequences worth knowing: the destination address has to be confirmed once
+  before anything is delivered, and it is readable in the page source. FormSubmit
+  issues a random alias to avoid the second — swapping `FORM_ENDPOINT` in
+  `contact-panel.tsx` for that alias keeps the address off the page.
 - No OG image or analytics.
 - **`.story--bold` is dead CSS.** This file documents a `<StoryPage bold>`
   variant for the services page, and the rules for it exist in `globals.css`,
@@ -977,10 +980,10 @@ different build with real consequences:
   at the root, so `public/index.html` stands in for it — the same order of
   preference, decided in the browser instead. It is only reachable in the static
   build; every other host uses the proxy.
-- **`/api/contact` does not exist.** The form posts, gets the 404 page back, and
-  shows its error note. Nothing is actually lost — the route is a stub that logs
-  and delivers nothing — but it looks broken to anyone who tries it. Wire the
-  route to a real service *and* move off Pages before pointing a customer here.
+- **There is no server here, and nothing needs one.** The contact form posts
+  straight to FormSubmit from the browser, so it works on Pages exactly as it
+  does anywhere else. It used to post to a route handler that Pages cannot run,
+  which is why it showed an error to anyone who tried it.
 - **The site is served from a subdirectory** (`/Aiodyx-semo-03`), so the build
   sets `basePath`. Next rewrites its own asset URLs for that, but not paths
   written by hand: `next/image` marked `unoptimized` is passed through verbatim,

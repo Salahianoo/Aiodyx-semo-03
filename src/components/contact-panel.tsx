@@ -19,6 +19,28 @@ const ContactScene = dynamic(
   { ssr: false },
 );
 
+/**
+ * Where the form actually delivers.
+ *
+ * FormSubmit forwards the submission by email, which is what this site needs:
+ * GitHub Pages serves files and cannot run a route handler, so the form had
+ * nowhere to post and showed its error note to anyone who tried it.
+ *
+ * The `/ajax/` endpoint rather than a plain `action=` on the form: a normal
+ * POST navigates the browser to FormSubmit's own thank-you page, which would
+ * throw away the validation, the field-level errors and the sent state below.
+ * This keeps the visitor on the page.
+ *
+ * Two things to know about this address:
+ *
+ * 1. It has to be confirmed once. The first submission sends an activation
+ *    link to it and nothing is forwarded until someone clicks it.
+ * 2. It is visible in the page source, so scrapers can read it. FormSubmit
+ *    issues a random alias for exactly this reason — swapping this string for
+ *    that alias, once activated, keeps the address off the page.
+ */
+const FORM_ENDPOINT = "https://formsubmit.co/ajax/m.salem@shamsieh.com";
+
 type Status = "idle" | "sending" | "sent" | "error";
 type Errors = Partial<Record<string, string>>;
 
@@ -63,9 +85,14 @@ export function ContactPanel() {
 
     setStatus("sending");
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(FORM_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // Both headers matter: without `Accept` the endpoint answers with a
+        // redirect to its HTML thank-you page instead of JSON.
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify(Object.fromEntries(data)),
       });
       if (!res.ok) throw new Error(String(res.status));
@@ -98,11 +125,25 @@ export function ContactPanel() {
             <p className="panel__sub">{t(locale, "contact.form.subtitle")}</p>
 
             <form onSubmit={onSubmit} noValidate className="form">
-              {/* Honeypot — bots fill it, humans never see it */}
+              {/* Honeypot — bots fill it, humans never see it. Named `_honey`
+                  because that is the name FormSubmit looks for: anything that
+                  arrives with it filled is dropped at their end rather than
+                  landing in the inbox. */}
               <div aria-hidden className="form__trap">
                 <label htmlFor="website">Website</label>
-                <input id="website" name="website" tabIndex={-1} autoComplete="off" />
+                <input id="website" name="_honey" tabIndex={-1} autoComplete="off" />
               </div>
+
+              {/* Instructions to FormSubmit, not questions for the visitor.
+                  They ride along in the form data like any other field.
+
+                  `_captcha` off because the AJAX endpoint has no page on which
+                  to show one — left on, a submission comes back asking for a
+                  challenge the visitor never sees. The honeypot above is what
+                  carries the spam load instead. */}
+              <input type="hidden" name="_subject" value="AIODYX: new enquiry" />
+              <input type="hidden" name="_template" value="table" />
+              <input type="hidden" name="_captcha" value="false" />
 
               <div className="form__row">
                 <Field id="name" label={t(locale, "contact.form.name")} error={errors.name} required>
