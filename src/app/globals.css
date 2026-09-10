@@ -54,8 +54,20 @@
   --font-ui: var(--font-latin), ui-sans-serif, system-ui, sans-serif;
 }
 
-:root:lang(ar) {
+/* Any Arabic subtree, not just an Arabic document. Written `:root:lang(ar)`
+   it only fired when <html> itself carried the language, which is true of every
+   page under /ar and false of the two places Arabic appears inside an English
+   document: the 404, which offers both languages because an unknown path has no
+   locale to read, and the nav's language switch, whose label is the Arabic
+   letter it is offering. Both were being set in Inter, which has no Arabic
+   glyphs at all. */
+:lang(ar) {
   --font-ui: var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  /* Redefining the variable is not enough on its own. `font-family` is declared
+     once on `body`, so it computes to the Latin stack there and every child
+     inherits *that resolved value* — a new `--font-ui` further down is never
+     consulted. The element has to ask for the variable itself. */
+  font-family: var(--font-ui);
 }
 
 @theme inline {
@@ -666,6 +678,50 @@ body {
   .offices__link:hover {
     color: var(--paper);
   }
+}
+
+/* --------------------------------------------------------------- 404 */
+
+/* Its own screen, not a beat: there is no scene behind it and no scroll story
+   to join, so it centres on the page rather than sitting in a copy column. */
+.notfound {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.notfound__code {
+  font-family: var(--font-ui);
+  font-size: clamp(4rem, 18vw, 9rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  /* The page's own ink, lightened: the number is the largest thing here and at
+     full strength it shouts at someone who has already hit a dead end. */
+  color: color-mix(in oklab, var(--paper) 30%, transparent);
+}
+
+.notfound__pair {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notfound__line {
+  font-size: 1.0625rem;
+  color: var(--paper-dim);
+}
+
+.notfound__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
 }
 
 /* ------------------------------------------------------------ scroll hint */

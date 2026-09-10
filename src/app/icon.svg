@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="299 328 468 468" width="512" height="512">
+  <title>AIODYX</title>
+  <!-- The monogram alone. The full lockup is 1998 units wide against 424 tall;
+       at 16 pixels that is a smear, and the two glyphs that actually identify
+       the brand are these. Paths are lifted verbatim from `components/brand.tsx`
+       so the icon cannot drift from the logo the site draws. -->
+  <rect x="299" y="328" width="468" height="468" rx="96" fill="#F4F5F9"/>
+  <g fill="#13308a">
+    <path d="M664.52,355.77v413.06h71.19v-413.06h-71.19Z"/>
+    <path d="M428,355.3l205.84,413.52h-304.12l46.83-68.33h141.8l-90.47-186.39-126.27,254.72h-81.3l207.68-413.52Z"/>
+  </g>
+</svg>
